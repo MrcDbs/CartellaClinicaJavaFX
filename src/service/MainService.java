@@ -22,25 +22,25 @@ public class MainService {
 		this.repository = repository;
 	}
 
-//	public ResponseDTO login(UserLoginDTO user) {
-//		ResponseDTO response = new ResponseDTO();
-//		response.setStatusCode(200L);
-//		return response;
-//	}
-
-	public ResponseDTO<?> login(UserLoginDTO user) {
-		ResponseDTO<?> response = new ResponseDTO();
-		try {
-			response = this.repository.login(user);
-		} catch (SQLException e) {
-			response.setData(null);
-			response.setEsito("ERROR");
-			response.setMessage(e.getMessage());
-			response.setStatusCode(500L);
-			e.printStackTrace();
-		}
+	public ResponseDTO login(UserLoginDTO user) {
+		ResponseDTO response = new ResponseDTO();
+		response.setStatusCode(200L);
 		return response;
 	}
+
+//	public ResponseDTO<?> login(UserLoginDTO user) {
+//		ResponseDTO<?> response = new ResponseDTO();
+//		try {
+//			response = this.repository.login(user);
+//		} catch (SQLException e) {
+//			response.setData(null);
+//			response.setEsito("ERROR");
+//			response.setMessage(e.getMessage());
+//			response.setStatusCode(500L);
+//			e.printStackTrace();
+//		}
+//		return response;
+//	}
 	
 //	public ResponseDTO salvaPaziente(PazienteDTO paziente) {
 //		ResponseDTO response = new ResponseDTO();

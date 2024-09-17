@@ -19,6 +19,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
@@ -29,6 +30,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -584,6 +586,11 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         	}
         	
         });
+        cartellaClinica.setOnAction(e -> {
+        	if(this.pazienteSelezionato != null) {
+        		this.openCartellaClinicaModale(this.pazienteSelezionato);
+        	}
+        });
         stage.setScene(scene);
         stage.show();
 		
@@ -598,6 +605,113 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 	private void openCartellaClinicaModale(PazienteDTO paziente) {
 		Stage stage = new Stage();
 		this.stageList.put("cartellaClinicaStage", stage);
+		stage.setTitle("Ricerca");
+		
+		Label titoloModale = new Label("Cartella Clinica Paziente");
+		titoloModale.setPadding(new Insets(5,0,20,0));
+        BorderPane.setAlignment(titoloModale, Pos.TOP_CENTER);
+        
+        titoloModale.setStyle("-fx-font-size: 20px;"); 
+        
+        BorderPane root = new BorderPane();
+        root.setTop(titoloModale);
+        
+        Label codiceFiscale = new Label("Codice Fiscale: " + paziente.getCodiceFiscale());
+		codiceFiscale.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        Label cognome = new Label("Cognome: " + paziente.getCognome());
+        cognome.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        Label nome = new Label("Nome: " + paziente.getNome());
+        nome.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        HBox rowLabel = new HBox(25, codiceFiscale, cognome, nome);
+        rowLabel.setAlignment(Pos.CENTER);
+        VBox vbox = new VBox(15, rowLabel);
+        
+        Label data = new Label("Data:");
+        data.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextField dataField = new TextField();
+        HBox rowData = new HBox(10, data, dataField);
+        rowData.setAlignment(Pos.CENTER);
+        vbox.getChildren().addAll(rowData);
+        
+        Label dataFarmacoDa = new Label("Data Farmaco DA:");
+        dataFarmacoDa.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextField dataFarmacoDaField = new TextField();
+        Label dataFarmacoA = new Label("Data Farmaco A:");
+        dataFarmacoA.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextField dataFarmacoAField = new TextField();
+        HBox rowDataDaA = new HBox(10, dataFarmacoDa, dataFarmacoDaField, dataFarmacoA, dataFarmacoAField);
+        rowDataDaA.setAlignment(Pos.CENTER);
+        vbox.getChildren().addAll(rowDataDaA);
+        
+        Label patologia = new Label("Patologia:");
+        patologia.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        ComboBox<String> patologiaField = new ComboBox<>();
+        patologiaField.getItems().addAll("Patologia1","Patologia2");
+        Label cura = new Label("Cura:");
+        cura.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        ComboBox<String> curaField = new ComboBox<>();
+        curaField.getItems().addAll("Cura1","Cura2");
+        Button aggiungi = new Button("Aggiungi");
+        Button elimina = new Button("Elimina");
+        
+        HBox selectRow = new HBox(20, patologia, patologiaField, cura, curaField, aggiungi, elimina);
+        selectRow.setAlignment(Pos.CENTER);
+        vbox.getChildren().addAll(selectRow);
+        
+        // ###### TABLE ############
+        
+        TableView<PazienteDTO> table = new TableView<>();
+		table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+		vbox.setMaxWidth(570);
+		vbox.setMaxHeight(500);
+		
+		TableColumn<PazienteDTO, Integer> dataDaColumn = new TableColumn<>("Data Da");
+		dataDaColumn.setCellValueFactory(new PropertyValueFactory<>("dataDa"));
+		dataDaColumn.setPrefWidth(130);
+		TableColumn<PazienteDTO, String> dataAColumn = new TableColumn<>("Data A");
+		dataAColumn.setCellValueFactory(new PropertyValueFactory<>("dataA"));
+		dataAColumn.setPrefWidth(130);
+        TableColumn<PazienteDTO, String> patologiaColumn = new TableColumn<>("Patologia");
+        patologiaColumn.setCellValueFactory(new PropertyValueFactory<>("patologia"));
+        patologiaColumn.setPrefWidth(155);
+        TableColumn<PazienteDTO, String> farmacoColumn = new TableColumn<>("Farmaco");
+        farmacoColumn.setCellValueFactory(new PropertyValueFactory<>("farmaco"));
+        farmacoColumn.setPrefWidth(155);
+
+        
+
+        // Add columns to the table
+        table.getColumns().add(dataDaColumn);
+        table.getColumns().add(dataAColumn);
+        table.getColumns().add(patologiaColumn);
+        table.getColumns().add(farmacoColumn);
+        
+        vbox.getChildren().addAll(table);
+        
+        Label note = new Label("Note:");
+        patologia.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextArea noteField = new TextArea();
+        noteField.setMaxWidth(370);
+        noteField.setMaxHeight(70);
+        HBox noteRow = new HBox(10, note, noteField);
+        noteRow.setAlignment(Pos.CENTER);
+        vbox.getChildren().addAll(noteRow);
+        
+        Button storico = new Button("Storico");
+        Button stampa = new Button("Stampa");
+        Button salva = new Button("Salva");
+        HBox rowButtonEnd = new HBox(15, storico, stampa, salva);
+        rowButtonEnd.setAlignment(Pos.CENTER);
+        rowButtonEnd.setPadding(new Insets(0,0,10,0));
+        vbox.getChildren().addAll(rowButtonEnd);
+        
+        
+        root.setCenter(vbox);
+        Scene scene = new Scene(root, 600, 580);
+        stage.setScene(scene);
+        stage.show();
+        
+        
 		
 		
 		
