@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import dao.DataAccessRepository;
 import javafx.animation.PauseTransition;
@@ -42,8 +43,11 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import model.Farmaco;
 import model.ListModelDTO;
-import model.ModelDTO;
+import model.ModelPatologiaFarmacoDTO;
+import model.Patologia;
+import model.PatologiaCura;
 import model.PazienteDTO;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
@@ -227,7 +231,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         RadioButton sessoFieldM = new RadioButton("M");
         RadioButton sessoFieldF = new RadioButton("F");
         
-        dataNascitaField.setPromptText("dd-MM-yyyy");
+        dataNascitaField.setPromptText("dd/MM/yyyy");
      // Create a ToggleGroup to group the RadioButtons
         ToggleGroup group = new ToggleGroup();
         sessoFieldM.setSelected(true);
@@ -605,7 +609,11 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 	private void openCartellaClinicaModale(PazienteDTO paziente) {
 		Stage stage = new Stage();
 		this.stageList.put("cartellaClinicaStage", stage);
-		stage.setTitle("Ricerca");
+		stage.setTitle("Cartella Clinica Paziente");
+		List<Patologia> listaPatologie = this.service.getPatologiaList().getData();
+		List<Farmaco> listaFarmaci = this.service.getFarmacoList().getData();
+		List<PatologiaCura> patologiaCuraList = new ArrayList<>();
+		//List<PatologiaCura> patologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
 		
 		Label titoloModale = new Label("Cartella Clinica Paziente");
 		titoloModale.setPadding(new Insets(5,0,20,0));
@@ -617,11 +625,11 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         root.setTop(titoloModale);
         
         Label codiceFiscale = new Label("Codice Fiscale: " + paziente.getCodiceFiscale());
-		codiceFiscale.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+		codiceFiscale.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
         Label cognome = new Label("Cognome: " + paziente.getCognome());
-        cognome.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        cognome.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
         Label nome = new Label("Nome: " + paziente.getNome());
-        nome.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        nome.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
         HBox rowLabel = new HBox(25, codiceFiscale, cognome, nome);
         rowLabel.setAlignment(Pos.CENTER);
         VBox vbox = new VBox(15, rowLabel);
@@ -629,6 +637,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         Label data = new Label("Data:");
         data.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         TextField dataField = new TextField();
+        dataField.setPromptText("dd/MM/yyyy");
         HBox rowData = new HBox(10, data, dataField);
         rowData.setAlignment(Pos.CENTER);
         vbox.getChildren().addAll(rowData);
@@ -636,21 +645,35 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         Label dataFarmacoDa = new Label("Data Farmaco DA:");
         dataFarmacoDa.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         TextField dataFarmacoDaField = new TextField();
+        dataFarmacoDaField.setPromptText("dd/MM/yyyy");
         Label dataFarmacoA = new Label("Data Farmaco A:");
         dataFarmacoA.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         TextField dataFarmacoAField = new TextField();
+        dataFarmacoAField.setPromptText("dd/MM/yyyy");
         HBox rowDataDaA = new HBox(10, dataFarmacoDa, dataFarmacoDaField, dataFarmacoA, dataFarmacoAField);
         rowDataDaA.setAlignment(Pos.CENTER);
         vbox.getChildren().addAll(rowDataDaA);
         
         Label patologia = new Label("Patologia:");
         patologia.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
-        ComboBox<String> patologiaField = new ComboBox<>();
-        patologiaField.getItems().addAll("Patologia1","Patologia2");
+        ComboBox<Patologia> patologiaField = new ComboBox<>();
+        patologiaField.setItems(FXCollections.observableArrayList(listaPatologie));
+//        patologiaField.setItems(FXCollections.observableArrayList(
+//            listaPatologie.stream()
+//            .map(p -> p.getNome())
+//            .collect(Collectors.toList())
+//        ));
+        patologiaField.setValue(listaPatologie.get(0));
         Label cura = new Label("Cura:");
         cura.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
-        ComboBox<String> curaField = new ComboBox<>();
-        curaField.getItems().addAll("Cura1","Cura2");
+        ComboBox<Farmaco> curaField = new ComboBox<>();
+        curaField.setItems(FXCollections.observableArrayList(listaFarmaci));
+//        curaField.setItems(FXCollections.observableArrayList(
+//                this.service.getFarmacoList().getData().stream()
+//                .map(p -> p.getNome())
+//                .collect(Collectors.toList())
+//            ));
+        curaField.setValue(listaFarmaci.get(0));
         Button aggiungi = new Button("Aggiungi");
         Button elimina = new Button("Elimina");
         
@@ -660,22 +683,22 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         
         // ###### TABLE ############
         
-        TableView<PazienteDTO> table = new TableView<>();
+        TableView<PatologiaCura> table = new TableView<>();
 		table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		vbox.setMaxWidth(570);
 		vbox.setMaxHeight(500);
 		
-		TableColumn<PazienteDTO, Integer> dataDaColumn = new TableColumn<>("Data Da");
-		dataDaColumn.setCellValueFactory(new PropertyValueFactory<>("dataDa"));
+		TableColumn<PatologiaCura, String> dataDaColumn = new TableColumn<>("Data Da");
+		dataDaColumn.setCellValueFactory(new PropertyValueFactory<>("da"));
 		dataDaColumn.setPrefWidth(130);
-		TableColumn<PazienteDTO, String> dataAColumn = new TableColumn<>("Data A");
-		dataAColumn.setCellValueFactory(new PropertyValueFactory<>("dataA"));
+		TableColumn<PatologiaCura, String> dataAColumn = new TableColumn<>("Data A");
+		dataAColumn.setCellValueFactory(new PropertyValueFactory<>("a"));
 		dataAColumn.setPrefWidth(130);
-        TableColumn<PazienteDTO, String> patologiaColumn = new TableColumn<>("Patologia");
-        patologiaColumn.setCellValueFactory(new PropertyValueFactory<>("patologia"));
+        TableColumn<PatologiaCura, String> patologiaColumn = new TableColumn<>("Patologia");
+        patologiaColumn.setCellValueFactory(new PropertyValueFactory<>("patologiaNome"));
         patologiaColumn.setPrefWidth(155);
-        TableColumn<PazienteDTO, String> farmacoColumn = new TableColumn<>("Farmaco");
-        farmacoColumn.setCellValueFactory(new PropertyValueFactory<>("farmaco"));
+        TableColumn<PatologiaCura, String> farmacoColumn = new TableColumn<>("Farmaco");
+        farmacoColumn.setCellValueFactory(new PropertyValueFactory<>("farmacoNome"));
         farmacoColumn.setPrefWidth(155);
 
         
@@ -685,8 +708,27 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         table.getColumns().add(dataAColumn);
         table.getColumns().add(patologiaColumn);
         table.getColumns().add(farmacoColumn);
-        
+        ObservableList<PatologiaCura> dataTableCartella = FXCollections.observableArrayList(patologiaCuraList);
+        table.setItems(dataTableCartella);
         vbox.getChildren().addAll(table);
+        
+        aggiungi.setOnAction(e -> {
+        	if(!this.service.isDateValid(dataFarmacoAField.getText()) || !this.service.isDateValid(dataFarmacoDaField.getText())
+        			|| !this.service.isDateValid(dataField.getText())) {
+        		this.showAlertWithMessage("Alcune date non sono valide o non sono nel formato corretto", AlertType.WARNING);
+        	}else {
+        		String patologiaEntity = this.service.getPatologiaById(patologiaField.getValue().getId()).getPatologia().getNome();
+        		String farmacoEntity = this.service.getFarmacoById(curaField.getValue().getId()).getFarmaco().getNome();
+        		PatologiaCura patologiaCura = new PatologiaCura();
+            	patologiaCura.setA(dataFarmacoAField.getText());
+            	patologiaCura.setDa(dataFarmacoDaField.getText());
+            	patologiaCura.setPatologiaNome(patologiaEntity);
+            	patologiaCura.setFarmacoNome(farmacoEntity);
+            	
+            	this.addItemsToTable(table, dataTableCartella, patologiaCura, patologiaCuraList);
+        	}
+        	
+        });
         
         Label note = new Label("Note:");
         patologia.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
@@ -710,11 +752,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         Scene scene = new Scene(root, 600, 580);
         stage.setScene(scene);
         stage.show();
-        
-        
-		
-		
-		
+ 	
 	}
 	
 	private void ricercaPazienti(RicercaPazienteDTO ricerca, TableView<PazienteDTO> table) {
@@ -741,6 +779,12 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         		this.pazientiRicercaList
         );
         table.setItems(this.data);
+	}
+	
+	private void addItemsToTable(TableView<PatologiaCura> table, ObservableList<PatologiaCura> dataTableCartella, PatologiaCura item, List<PatologiaCura> patologiaCuraList ) {
+		patologiaCuraList.add(item);
+		dataTableCartella = FXCollections.observableArrayList(patologiaCuraList);
+		table.setItems(dataTableCartella);
 	}
 	
 

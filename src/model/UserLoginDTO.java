@@ -1,6 +1,6 @@
 package model;
 
-public class UserLoginDTO  extends ModelDTO{
+public class UserLoginDTO {
 	
 	private String username;
 	private String password;

@@ -11,6 +11,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
+import model.Farmaco;
+import model.Patologia;
+import model.PatologiaCura;
 import model.PazienteDTO;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
@@ -106,7 +109,7 @@ public class DataAccessRepository {
     	        try (ResultSet rs = pstmt.executeQuery()) {
     	            while (rs.next()) {
     	            	Date sqlDate = rs.getDate("data_nascita");
-    	                SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy");
+    	                SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
     	                String formattedDate = dateFormat.format(sqlDate);
     	            	pazientiList.add(new PazienteDTO(
     	            			rs.getString("codice_fiscale"),
@@ -212,7 +215,7 @@ public class DataAccessRepository {
     	    pstmt.setString(5, paziente.getResidenza());
     	    
     	    
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyy");
 
             LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
     	    
@@ -235,6 +238,103 @@ public class DataAccessRepository {
     	} 
 		return response;
 	
+    }
+    
+    public List<PatologiaCura> listaPatologiaCura(String cfPaziente) throws SQLException{
+    	List<PatologiaCura> patologiaCuraList = new ArrayList<>();
+   	    String query = "SELECT * FROM rel_patologia_cura WHERE cf_paziente = ?";
+	   	 try (Connection conn = dataBaseConnection.getConnection();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+	   		pstmt.setString(1, cfPaziente);
+	   		try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	            	patologiaCuraList.add(new PatologiaCura(
+	            			rs.getString("da"),
+	            			rs.getString("a"),
+	            			rs.getString("cf_paziente"),
+	            			Long.valueOf(rs.getInt("patologia")),
+	            			Long.valueOf(rs.getInt("farmaco")),
+	            			Long.valueOf(rs.getInt("id_visita")),null,null));
+	            	
+	            }
+	            return patologiaCuraList;
+	   		}
+	   	 }
+    }
+    
+    public List<Patologia> listaPatologia() throws SQLException{
+    	List<Patologia> patologiaList = new ArrayList<>();
+    	String query = "SELECT * FROM patologia";
+    	try (Connection conn = dataBaseConnection.getConnection();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+	   		ResultSet rs = pstmt.executeQuery();
+	   		while (rs.next()) {
+	   			patologiaList.add(new Patologia(
+	   					Long.valueOf(rs.getInt("id")),
+	   					rs.getString("nome"),
+	   					rs.getString("cause"),
+	   					rs.getString("effetti")));
+	   		}
+	   		return patologiaList;
+	   		
+    	}
+    }
+    
+    public List<Farmaco> listaFarmaco() throws SQLException{
+    	List<Farmaco> farmacoList = new ArrayList<>();
+    	String query = "SELECT * FROM farmaco";
+    	try (Connection conn = dataBaseConnection.getConnection();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+	   		ResultSet rs = pstmt.executeQuery();
+	   		while (rs.next()) {
+	   			farmacoList.add(new Farmaco(
+	   					Long.valueOf(rs.getInt("id")),
+	   					rs.getString("nome"),
+	   					rs.getString("principio_attivo")));
+	   		}
+	   		return farmacoList;
+	   		
+    	}
+    }
+    
+    public Farmaco getFarmacoById(Long idFarmaco) throws SQLException {
+    	Farmaco farmaco = new Farmaco();
+    	String query = "SELECT * FROM farmaco WHERE id = ?";
+    	try (Connection conn = dataBaseConnection.getConnection();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+	   		pstmt.setInt(1, idFarmaco.intValue());
+	   		try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	            	farmaco.setId(rs.getLong("id"));
+	            	farmaco.setNome(rs.getString("nome"));
+	            	farmaco.setPrincipioAttivo(rs.getString("principio_attivo"));
+	            	
+	            }
+	            return farmaco;
+	   		}
+	   	 }
+	   		
+   	}
+    	
+    
+    
+    public Patologia getPatologiaById(Long idPatologia) throws SQLException {
+    	Patologia patologia = new Patologia();
+    	String query = "SELECT * FROM patologia WHERE id = ?";
+    	try (Connection conn = dataBaseConnection.getConnection();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+	   		pstmt.setInt(1, idPatologia.intValue());
+	   		try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	            	patologia.setId(rs.getLong("id"));
+	            	patologia.setNome(rs.getString("nome"));
+	            	patologia.setCause(rs.getString("cause"));
+	            	patologia.setEffetti(rs.getString("effetti"));
+	            	
+	            }
+	            return patologia;
+	   		}
+	   	 }
     }
 
 }

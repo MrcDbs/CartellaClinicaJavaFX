@@ -1,6 +1,6 @@
 package model;
 
-public class PazienteDTO extends ModelDTO{
+public class PazienteDTO{
 	
 	private String codiceFiscale;
 	private String cognome;
