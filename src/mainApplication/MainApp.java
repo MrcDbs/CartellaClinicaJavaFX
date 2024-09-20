@@ -45,6 +45,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import model.Farmaco;
 import model.ListModelDTO;
+import model.Medico;
 import model.ModelPatologiaFarmacoDTO;
 import model.Patologia;
 import model.PatologiaCura;
@@ -52,6 +53,7 @@ import model.PazienteDTO;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
 import model.UserLoginDTO;
+import model.Visita;
 import service.MainService;
 
 public class MainApp extends Application implements EventHandler<ActionEvent>{
@@ -61,6 +63,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 	private Button submitButton;
 	private MenuItem newItem;
 	private boolean userLoggedIn = false;
+	private String cfMedicoLoggato;
 	private Label titleLabel = new Label("Gestione Cartella Clinica");
 	private PazienteDTO pazienteSelezionato = null;
 	private Menu fileMenu;
@@ -68,9 +71,12 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 	private Menu helpMenu;
 	private Menu questionMark;
 	private TableView<PazienteDTO> tableRicercaPaziente;
+	private PatologiaCura modelForm = null;
 	
 	private ObservableList<PazienteDTO> data;
 	private List<PazienteDTO> pazientiRicercaList = new ArrayList<>();
+	private List<PatologiaCura> relPatologiaCuraList = new ArrayList<>();
+	
 	private Map<String, Stage> stageList = new HashMap<String, Stage>();
 	private Map<String, Button> buttonList = new HashMap<String, Button>();
 	private Map<String, MenuItem> menuItemList = new HashMap<String, MenuItem>();
@@ -386,6 +392,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
             	this.userLoggedIn = true;
             	this.stageList.get("loginStage").close();
 
+            	this.cfMedicoLoggato = (String)response.getData().get(0);
             	editMenu.setDisable(!this.userLoggedIn);
                 helpMenu.setDisable(!this.userLoggedIn);
                 questionMark.setDisable(!this.userLoggedIn);
@@ -607,13 +614,15 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 	}
 	
 	private void openCartellaClinicaModale(PazienteDTO paziente) {
+		this.relPatologiaCuraList.clear();
 		Stage stage = new Stage();
 		this.stageList.put("cartellaClinicaStage", stage);
 		stage.setTitle("Cartella Clinica Paziente");
 		List<Patologia> listaPatologie = this.service.getPatologiaList().getData();
 		List<Farmaco> listaFarmaci = this.service.getFarmacoList().getData();
-		List<PatologiaCura> patologiaCuraList = new ArrayList<>();
+		//List<PatologiaCura> patologiaCuraList = new ArrayList<>();
 		//List<PatologiaCura> patologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+		this.relPatologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
 		
 		Label titoloModale = new Label("Cartella Clinica Paziente");
 		titoloModale.setPadding(new Insets(5,0,20,0));
@@ -708,7 +717,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         table.getColumns().add(dataAColumn);
         table.getColumns().add(patologiaColumn);
         table.getColumns().add(farmacoColumn);
-        ObservableList<PatologiaCura> dataTableCartella = FXCollections.observableArrayList(patologiaCuraList);
+        ObservableList<PatologiaCura> dataTableCartella = FXCollections.observableArrayList(this.relPatologiaCuraList);
         table.setItems(dataTableCartella);
         vbox.getChildren().addAll(table);
         
@@ -725,7 +734,9 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
             	patologiaCura.setPatologiaNome(patologiaEntity);
             	patologiaCura.setFarmacoNome(farmacoEntity);
             	
-            	this.addItemsToTable(table, dataTableCartella, patologiaCura, patologiaCuraList);
+            	this.addItemsToTable(table, dataTableCartella, patologiaCura, this.relPatologiaCuraList);
+            	this.modelForm = patologiaCura;
+            	
         	}
         	
         });
@@ -742,6 +753,32 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         Button storico = new Button("Storico");
         Button stampa = new Button("Stampa");
         Button salva = new Button("Salva");
+        
+        salva.setOnAction(e -> {
+        	if(this.modelForm != null) {
+        		Long idVisita = this.salvaVisita(paziente, dataField.getText(), noteField.getText());
+            	if(idVisita != null) {
+            		Long patologiaId = this.service.getPatologiaById(patologiaField.getValue().getId()).getPatologia().getId();
+            		Long farmacoId = this.service.getFarmacoById(curaField.getValue().getId()).getFarmaco().getId();
+            		PatologiaCura patologiaCura = new PatologiaCura();
+                	patologiaCura.setA(dataFarmacoAField.getText());
+                	patologiaCura.setDa(dataFarmacoDaField.getText());
+                	patologiaCura.setPatologia(patologiaId);
+                	patologiaCura.setFarmaco(farmacoId);
+                	patologiaCura.setIdVisita(idVisita);
+                	patologiaCura.setCfPaziente(paziente.getCodiceFiscale());
+                	this.service.salvaRel(patologiaCura);
+                	this.relPatologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+                	
+            	}
+        	}else {
+        		this.showAlertWithMessage("Inserire un record prima di Salvare", AlertType.WARNING);
+        	}
+        	
+        });
+        storico.setOnAction(e -> {
+        	this.openStoricoVisiteModal(paziente);
+        });
         HBox rowButtonEnd = new HBox(15, storico, stampa, salva);
         rowButtonEnd.setAlignment(Pos.CENTER);
         rowButtonEnd.setPadding(new Insets(0,0,10,0));
@@ -753,6 +790,68 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         stage.setScene(scene);
         stage.show();
  	
+	}
+	
+	private void openStoricoVisiteModal(PazienteDTO paziente) {
+		Stage stage = new Stage();
+        stage.setTitle("Ricerca");
+        List<Visita> storicoVisite = this.service.getStoricoVisite(paziente.getCodiceFiscale()).getData();
+		 
+		Label titoloModale = new Label("Storico Visite");
+        //titoloModale.setPadding(new Insets(0,0,0,15));
+        BorderPane.setAlignment(titoloModale, Pos.TOP_LEFT);
+        
+        titoloModale.setStyle("-fx-font-size: 24px;"); 
+        BorderPane root = new BorderPane();
+        root.setTop(titoloModale);
+        
+        Label codiceFiscale = new Label("Codice Fiscale: " + paziente.getCodiceFiscale());
+		codiceFiscale.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
+        Label cognome = new Label("Cognome: " + paziente.getCognome());
+        cognome.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
+        Label nome = new Label("Nome: " + paziente.getNome());
+        nome.setStyle("-fx-font-weight: bold; -fx-font-size: 15px;");
+        HBox rowLabel = new HBox(25, codiceFiscale, cognome, nome);
+        rowLabel.setAlignment(Pos.CENTER);
+        VBox vbox = new VBox(15, rowLabel);
+        
+        TableView<Visita> table = new TableView<>();
+		table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
+		vbox.setMaxWidth(570);
+		vbox.setMaxHeight(500);
+		
+		
+		TableColumn<Visita, Long> idVisitaColumn = new TableColumn<>("Id Visita");
+		idVisitaColumn.setCellValueFactory(new PropertyValueFactory<>("idVisita"));
+		idVisitaColumn.setPrefWidth(175);
+		TableColumn<Visita, String> dataColumn = new TableColumn<>("Data Visita");
+		dataColumn.setCellValueFactory(new PropertyValueFactory<>("data"));
+		dataColumn.setPrefWidth(175);
+        TableColumn<Visita, String> cfMedicoColumn = new TableColumn<>("CF Medico");
+        cfMedicoColumn.setCellValueFactory(new PropertyValueFactory<>("cfMedico"));
+        cfMedicoColumn.setPrefWidth(175);
+        
+        table.getColumns().add(idVisitaColumn);
+        table.getColumns().add(dataColumn);
+        table.getColumns().add(cfMedicoColumn);
+        ObservableList<Visita> tableVisite = FXCollections.observableArrayList(storicoVisite);
+        table.setItems(tableVisite);
+        vbox.getChildren().addAll(table);
+        
+        Button visualizza = new Button("Visualizza");
+        
+      
+        HBox rowButtonEnd = new HBox(15, visualizza);
+        rowButtonEnd.setAlignment(Pos.CENTER);
+        rowButtonEnd.setPadding(new Insets(0,0,10,0));
+        vbox.getChildren().addAll(rowButtonEnd);
+        
+        
+        root.setCenter(vbox);
+        Scene scene = new Scene(root, 620, 500);
+        stage.setScene(scene);
+        stage.show();
+		
 	}
 	
 	private void ricercaPazienti(RicercaPazienteDTO ricerca, TableView<PazienteDTO> table) {
@@ -785,6 +884,28 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		patologiaCuraList.add(item);
 		dataTableCartella = FXCollections.observableArrayList(patologiaCuraList);
 		table.setItems(dataTableCartella);
+	}
+	
+	private Long salvaVisita(PazienteDTO paziente, String data, String note) {
+		Long idVisita = null;
+		if(this.cfMedicoLoggato != null) {
+    		Visita visita = new Visita();
+        	visita.setCfMedico(this.cfMedicoLoggato);
+        	visita.setCfPaziente(paziente.getCodiceFiscale());
+        	visita.setData(data);
+        	visita.setNote(note);
+        	ResponseDTO<?> response = this.service.salvaVisita(visita);
+        	if(response.getStatusCode() == 200L) {
+        		idVisita = response.getId();
+        		this.showAlertWithMessage(response.getMessage(), AlertType.CONFIRMATION);
+        	}else {
+        		this.showAlertWithMessage(response.getMessage(), AlertType.ERROR);
+        	}
+    	}else {
+    		this.showAlertWithMessage("Problema con il cf del medico", AlertType.ERROR);
+    	}
+		
+		return idVisita;
 	}
 	
 

@@ -5,6 +5,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -18,6 +19,7 @@ import model.PazienteDTO;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
 import model.UserLoginDTO;
+import model.Visita;
 
 public class DataAccessRepository {
 	private DataBaseConnection dataBaseConnection;
@@ -129,8 +131,8 @@ public class DataAccessRepository {
         return pazientiList;
     }
     
-    public ResponseDTO<?> login(UserLoginDTO user) throws SQLException {
-    	ResponseDTO<?> response = new ResponseDTO();
+    public ResponseDTO<String> login(UserLoginDTO user) throws SQLException {
+    	ResponseDTO<String> response = new ResponseDTO<String>();
         String query = "SELECT * FROM Medico WHERE username = ?";
 
         try (Connection conn = dataBaseConnection.getConnection();
@@ -153,6 +155,9 @@ public class DataAccessRepository {
                     response.setMessage(rs.getString("cognome") + " " + rs.getString("nome") + " ha\neffettuato l'accesso");
                     response.setEsito("OK");
                     response.setStatusCode(200L);
+                    List<String> cfList = new ArrayList<>();
+                    cfList.add(rs.getString("codice_fiscale"));
+                    response.setData(cfList);
                 } else {
                     response.setMessage("Password errata per questo username.");
                     response.setEsito("ERROR");
@@ -336,5 +341,88 @@ public class DataAccessRepository {
 	   		}
 	   	 }
     }
+    
+    public ResponseDTO<Long> salvaVisita(Visita visita) throws SQLException {
+    	ResponseDTO<Long> response = new ResponseDTO<Long>();
+    	
+    	String query = "INSERT INTO visita (data, cf_paziente, cf_medico, note) VALUES (?, ?, ?, ?)";
+    	try (Connection conn = dataBaseConnection.getConnection();
+    			PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+    	    
+    	    pstmt.setString(1, visita.getData());
+    	    pstmt.setString(2, visita.getCfPaziente());
+    	    pstmt.setString(3, visita.getCfMedico());
+    	    pstmt.setString(4, visita.getNote());
+    	    
+    	    int rowsAffected = pstmt.executeUpdate();
+    	    if(rowsAffected > 0) {
+    	    	 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+    	             if (generatedKeys.next()) {
+    	                 long generatedId = generatedKeys.getLong(4); // Get the generated ID
+    	                 response.setEsito("OK");
+    	                 response.setMessage("Visita salvata correttamente");
+    	                 response.setStatusCode(200L);
+    	                 response.setId(Long.valueOf(generatedId));
+    	             }
+    	    	 }
+    	    }else {
+    	    	response.setEsito("ERROR");
+    	    	response.setMessage("Salvataggio non riuscito");
+    	    	response.setStatusCode(401L);
+    	    }
+    	} 
+		return response;
+    }
+    
+    public ResponseDTO<?> salvaRelPatologiaCura(PatologiaCura entity) throws SQLException{
+    	ResponseDTO<?> response = new ResponseDTO();
+    	
+    	String query = "INSERT INTO rel_patologia_cura (da, a, cf_paziente, patologia, farmaco, id_visita) VALUES (?, ?, ?, ?, ?, ?)";
+    	try (Connection conn = dataBaseConnection.getConnection();
+    			PreparedStatement pstmt = conn.prepareStatement(query)) {
+    		pstmt.setString(1, entity.getDa());
+    		pstmt.setString(2, entity.getA());
+    		pstmt.setString(3, entity.getCfPaziente());
+    		pstmt.setLong(4, entity.getPatologia());
+    		pstmt.setLong(5, entity.getFarmaco());
+    		pstmt.setLong(6, entity.getIdVisita());
+    		int rowsAffected = pstmt.executeUpdate();
+    	    if(rowsAffected > 0) {
+    	    	response.setEsito("OK");
+                response.setMessage("Paziente salvato correttamente");
+                response.setStatusCode(200L);
+    	    }else {
+    	    	response.setEsito("ERROR");
+    	    	response.setMessage("Salvataggio non riuscito");
+    	    	response.setStatusCode(401L);
+    	    
+    	    }
+    		
+    	}
+    	return response;
+    }
+    
+    public List<Visita> getStoricoVisite(String cfPaziente) throws SQLException{
+    	List<Visita> storicoVisite = new ArrayList<Visita>();
+    	String query = "SELECT * FROM visita WHERE cf_paziente = ?";
+    	try (Connection conn = dataBaseConnection.getConnection();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+    		pstmt.setString(1, cfPaziente);
+	   		try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	            	Visita visita = new Visita();
+	            	visita.setIdVisita(rs.getLong("id_visita"));
+	            	visita.setData(rs.getString("data"));
+	            	visita.setCfPaziente(rs.getString("cf_paziente"));
+	            	visita.setCfMedico(rs.getString("cf_medico"));
+	            	visita.setNote(rs.getString("note"));
+	            	storicoVisite.add(visita);
+	            	
+	            }
+	            return storicoVisite;
+	   		}
+	   	 }
+    }
+    
 
 }

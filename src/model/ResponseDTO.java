@@ -8,6 +8,7 @@ public class ResponseDTO<T> {
 	private Long statusCode;
 	private String esito;
 	private List<T> data;
+	private Long id;
 	
 	
 	
@@ -38,6 +39,13 @@ public class ResponseDTO<T> {
 	}
 	public void setData(List<T> data) {
 		this.data = data;
+	}
+	
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
 	}
 	@Override
 	public String toString() {

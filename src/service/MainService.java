@@ -8,6 +8,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 import dao.DataAccessRepository;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.geometry.Pos;
+import javafx.scene.control.Label;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import model.Farmaco;
 import model.ListModelDTO;
 import model.ModelPatologiaFarmacoDTO;
@@ -17,6 +28,7 @@ import model.PazienteDTO;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
 import model.UserLoginDTO;
+import model.Visita;
 
 public class MainService {
 	
@@ -29,25 +41,25 @@ public class MainService {
 		this.repository = repository;
 	}
 
-	public ResponseDTO login(UserLoginDTO user) {
-		ResponseDTO response = new ResponseDTO();
-		response.setStatusCode(200L);
-		return response;
-	}
-
-//	public ResponseDTO<?> login(UserLoginDTO user) {
-//		ResponseDTO<?> response = new ResponseDTO();
-//		try {
-//			response = this.repository.login(user);
-//		} catch (SQLException e) {
-//			response.setData(null);
-//			response.setEsito("ERROR");
-//			response.setMessage(e.getMessage());
-//			response.setStatusCode(500L);
-//			e.printStackTrace();
-//		}
+//	public ResponseDTO login(UserLoginDTO user) {
+//		ResponseDTO response = new ResponseDTO();
+//		response.setStatusCode(200L);
 //		return response;
 //	}
+
+	public ResponseDTO<?> login(UserLoginDTO user) {
+		ResponseDTO<?> response = new ResponseDTO();
+		try {
+			response = this.repository.login(user);
+		} catch (SQLException e) {
+			response.setData(null);
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+	}
 	
 //	public ResponseDTO salvaPaziente(PazienteDTO paziente) {
 //		ResponseDTO response = new ResponseDTO();
@@ -64,8 +76,6 @@ public class MainService {
 			}else {
 				response = this.repository.modificaPaziente(paziente);
 			}
-			
-			System.out.println("response salva paziente" + response.toString());
 		} catch (SQLException e) {
 			response.setData(null);
 			response.setEsito("ERROR");
@@ -141,6 +151,12 @@ public class MainService {
 		ResponseDTO<PatologiaCura> response = new ResponseDTO<PatologiaCura>();
 		try {
 			List<PatologiaCura> result = this.repository.listaPatologiaCura(cfPaziente);
+			result.stream().forEach(rel -> {
+				String nomeFarmaco = this.getFarmacoById(rel.getFarmaco()).getFarmaco().getNome();
+				String nomePatologia = this.getPatologiaById(rel.getPatologia()).getPatologia().getNome();
+				rel.setFarmacoNome(nomeFarmaco);
+				rel.setPatologiaNome(nomePatologia);
+			});
 			response.setData(result);
 			response.setEsito("OK");
 			response.setMessage("Dati recuperati con successo");
@@ -196,6 +212,36 @@ public class MainService {
 		return response;
 	}
 	
+	public ResponseDTO<Long> salvaVisita(Visita visita){
+		ResponseDTO<Long> response = new ResponseDTO<Long>();
+		try {
+			response = this.repository.salvaVisita(visita);
+			
+		} catch (SQLException e) {
+			response.setData(null);
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+	}
+	
+	public ResponseDTO<?> salvaRel(PatologiaCura entity){
+		ResponseDTO<?> response = new ResponseDTO();
+		try {
+			response = this.repository.salvaRelPatologiaCura(entity);
+			
+		} catch (SQLException e) {
+			response.setData(null);
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+	}
+	
 	public boolean isDateValid(String dateString) {
 		 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
@@ -211,4 +257,24 @@ public class MainService {
 	         return false;
 	     }
 	}
+	
+	public ResponseDTO<Visita> getStoricoVisite(String cfPaziente){
+		ResponseDTO<Visita> response = new ResponseDTO<Visita>();
+		try {
+			response.setData(this.repository.getStoricoVisite(cfPaziente));
+			response.setEsito("ERROR");
+			response.setMessage("Dati recuperati con successo");
+			response.setStatusCode(200L);
+			
+		} catch (SQLException e) {
+			response.setData(null);
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+	}
+	
+	
 }
