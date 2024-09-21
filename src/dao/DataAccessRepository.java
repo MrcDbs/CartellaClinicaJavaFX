@@ -184,7 +184,7 @@ public class DataAccessRepository {
     	    pstmt.setString(5, paziente.getVia());
     	    pstmt.setString(6, paziente.getResidenza());
     	    
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
             LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
     	    
