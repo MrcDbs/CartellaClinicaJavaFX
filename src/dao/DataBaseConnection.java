@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.Properties;
 
 public class DataBaseConnection {
@@ -32,7 +34,7 @@ public class DataBaseConnection {
 //	        return DriverManager.getConnection(properties.getProperty("database.url"), properties.getProperty("database.username"), properties.getProperty("database.password"));
 //	    }
 	    
-	    public Connection getConnection() throws SQLException{
+	    public Connection connetti() throws SQLException{
 	    	Properties properties = new Properties();
 
 	        // Load properties and establish connection

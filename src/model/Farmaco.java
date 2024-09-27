@@ -17,6 +17,13 @@ public class Farmaco {
 		this.principioAttivo = principioAttivo;
 	}
 
+	
+	
+	public Farmaco(Long id) {
+		super();
+		this.id = id;
+	}
+
 	public Long getId() {
 		return id;
 	}

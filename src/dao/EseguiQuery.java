@@ -13,24 +13,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 import model.Farmaco;
+import model.Medico;
 import model.Patologia;
 import model.PatologiaCura;
-import model.PazienteDTO;
+import model.Paziente;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
 import model.UserLoginDTO;
 import model.Visita;
 
-public class DataAccessRepository {
+public class EseguiQuery {
 	private DataBaseConnection dataBaseConnection;
 
-    public DataAccessRepository() {
+    public EseguiQuery() {
         this.dataBaseConnection = new DataBaseConnection();
     }
 
 //    public void addUser(String username, String password) throws SQLException {
 //        String query = "INSERT INTO users (username, password) VALUES (?, ?)";
-//        try (Connection conn = dataBaseConnection.getConnection();
+//        try (Connection conn = dataBaseConnection.connetti();
 //             PreparedStatement pstmt = conn.prepareStatement(query)) {
 //            pstmt.setString(1, username);
 //            pstmt.setString(2, password);
@@ -41,8 +42,8 @@ public class DataAccessRepository {
 
     // RICERCA PAZIENTE - RICERCA PAZIENTI CON FILTRI
     
-    public List<PazienteDTO> getPazienti(RicercaPazienteDTO ricercaDTO) throws SQLException {
-    	 List<PazienteDTO> pazientiList = new ArrayList<>();
+    public List<Paziente> ricercaPazienti(RicercaPazienteDTO ricercaDTO) throws SQLException {
+    	 List<Paziente> pazientiList = new ArrayList<>();
     	 StringBuilder queryBuilder = new StringBuilder("SELECT * FROM paziente");
     	 List<String> conditions = new ArrayList<>();
 	     List<String> patologiaConditions = new ArrayList<>();
@@ -84,7 +85,7 @@ public class DataAccessRepository {
     	 }
     	 String query = queryBuilder.toString();
     	 
-    	 try (Connection conn = dataBaseConnection.getConnection();
+    	 try (Connection conn = dataBaseConnection.connetti();
     	         PreparedStatement pstmt = conn.prepareStatement(query)) {
     	        
     	        // SETTAGGIO PARAMETRI DINAMICAMENTE
@@ -113,7 +114,7 @@ public class DataAccessRepository {
     	            	Date sqlDate = rs.getDate("data_nascita");
     	                SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
     	                String formattedDate = dateFormat.format(sqlDate);
-    	            	pazientiList.add(new PazienteDTO(
+    	            	pazientiList.add(new Paziente(
     	            			rs.getString("codice_fiscale"),
     	                        rs.getString("cognome"),
     	                        rs.getString("nome"),
@@ -131,11 +132,11 @@ public class DataAccessRepository {
         return pazientiList;
     }
     
-    public ResponseDTO<String> login(UserLoginDTO user) throws SQLException {
+    public ResponseDTO<String> verificaLogin(UserLoginDTO user) throws SQLException {
     	ResponseDTO<String> response = new ResponseDTO<String>();
         String query = "SELECT * FROM Medico WHERE username = ?";
 
-        try (Connection conn = dataBaseConnection.getConnection();
+        try (Connection conn = dataBaseConnection.connetti();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
 
             pstmt.setString(1, user.getUsername());
@@ -152,12 +153,29 @@ public class DataAccessRepository {
                 String storedPassword = rs.getString("password");
 
                 if (storedPassword.equals(user.getPassword())) {
-                    response.setMessage(rs.getString("cognome") + " " + rs.getString("nome") + " ha\neffettuato l'accesso");
-                    response.setEsito("OK");
-                    response.setStatusCode(200L);
-                    List<String> cfList = new ArrayList<>();
-                    cfList.add(rs.getString("codice_fiscale"));
-                    response.setData(cfList);
+                	 LocalDate now = LocalDate.now();
+                	 Date sqlStartDate = rs.getDate("dal");
+                     LocalDate startDate = (sqlStartDate != null) ? sqlStartDate.toLocalDate() : null;
+
+                     Date sqlEndDate = rs.getDate("al");
+                     LocalDate endDate = (sqlEndDate != null) ? sqlEndDate.toLocalDate() : null;
+                     
+                     
+                     if ((startDate == null || endDate == null || 
+                    	     (now.isAfter(startDate) || now.isEqual(startDate)) && 
+                    	     (now.isBefore(endDate) || now.isEqual(endDate))) || rs.getInt("responsabile") == 1) {
+                    	 response.setMessage(rs.getString("cognome") + " " + rs.getString("nome") + " ha\neffettuato l'accesso");
+                         response.setEsito("OK");
+                         response.setStatusCode(200L);
+                         List<String> cfList = new ArrayList<>();
+                         cfList.add(rs.getString("codice_fiscale"));
+                         response.setData(cfList);
+                     } else {
+                    	 response.setMessage("Utente non abilitato per la data odierna");
+                         response.setEsito("NOT AUTHORIZED");
+                         response.setStatusCode(401L);
+                     }
+                    
                 } else {
                     response.setMessage("Password errata per questo username.");
                     response.setEsito("ERROR");
@@ -170,85 +188,149 @@ public class DataAccessRepository {
     	
     }
     
-    public ResponseDTO<?> salvaPaziente(PazienteDTO paziente) throws SQLException {
+    public ResponseDTO<?> aggiornaPaziente(Paziente paziente, boolean nuovo) throws SQLException {
     	ResponseDTO<?> response = new ResponseDTO();
-    	
-    	String query = "INSERT INTO paziente (cognome, nome, codice_fiscale, telefono, via, residenza, data_nascita, "
-    			+ "luogo_nascita, sesso, occupazione) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    	try (Connection conn = dataBaseConnection.getConnection();
-    			PreparedStatement pstmt = conn.prepareStatement(query)) {
-    	    pstmt.setString(1, paziente.getCognome());
-    	    pstmt.setString(2, paziente.getNome());
-    	    pstmt.setString(3, paziente.getCodiceFiscale());
-    	    pstmt.setString(4, paziente.getNumeroTelefono());
-    	    pstmt.setString(5, paziente.getVia());
-    	    pstmt.setString(6, paziente.getResidenza());
-    	    
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    	String query = "";
+    	if(nuovo) {
+    		query = "INSERT INTO paziente (cognome, nome, codice_fiscale, telefono, via, residenza, data_nascita, "
+        			+ "luogo_nascita, sesso, occupazione) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    	}else {
+    		query = "UPDATE paziente SET cognome = ?, nome = ?, telefono = ?, via = ?, residenza = ?, "
+                    + "data_nascita = ?, luogo_nascita = ?, sesso = ?, occupazione = ? WHERE codice_fiscale = ?";
+    	}
+    	try (Connection conn = dataBaseConnection.connetti();
+        			PreparedStatement pstmt = conn.prepareStatement(query)) {
+    		// NUOVO
+    		if(nuovo) {
+    			pstmt.setString(1, paziente.getCognome());
+         	    pstmt.setString(2, paziente.getNome());
+         	    pstmt.setString(3, paziente.getCodiceFiscale());
+         	    pstmt.setString(4, paziente.getNumeroTelefono());
+         	    pstmt.setString(5, paziente.getVia());
+         	    pstmt.setString(6, paziente.getResidenza());
+         	    
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-            LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
-    	    
-    	    pstmt.setDate(7, Date.valueOf(localDate));
-    	    pstmt.setString(8, paziente.getLuogoNascita());
-    	    pstmt.setString(9, String.valueOf(paziente.getSesso()));
-    	    pstmt.setString(10, paziente.getOccupazione());
-    	    
-    	    int rowsAffected = pstmt.executeUpdate();
-    	    if(rowsAffected > 0) {
-    	    	response.setEsito("OK");
-    	    	response.setMessage("Paziente salvato correttamente");
-    	    	response.setStatusCode(200L);
-    	    }else {
-    	    	response.setEsito("ERROR");
-    	    	response.setMessage("Salvataggio non riuscito");
-    	    	response.setStatusCode(401L);
-    	    }
-    	} 
-		return response;
+                LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
+         	    
+         	    pstmt.setDate(7, Date.valueOf(localDate));
+         	    pstmt.setString(8, paziente.getLuogoNascita());
+         	    pstmt.setString(9, String.valueOf(paziente.getSesso()));
+         	    pstmt.setString(10, paziente.getOccupazione());
+    		}
+    		// MODIFICA
+    		else {
+    			pstmt.setString(1, paziente.getCognome());
+         	    pstmt.setString(2, paziente.getNome());
+         	    pstmt.setString(3, paziente.getNumeroTelefono());
+         	    pstmt.setString(4, paziente.getVia());
+         	    pstmt.setString(5, paziente.getResidenza());
+         	    
+         	    
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyy");
+
+                LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
+         	    
+         	    pstmt.setDate(6, Date.valueOf(localDate));
+         	    pstmt.setString(7, paziente.getLuogoNascita());
+         	    pstmt.setString(8, String.valueOf(paziente.getSesso()));
+         	    pstmt.setString(9, paziente.getOccupazione());
+         	    pstmt.setString(10, paziente.getCodiceFiscale());
+    		}
+    		 int rowsAffected = pstmt.executeUpdate();
+     	     if(rowsAffected > 0) {
+     	    	response.setEsito("OK");
+     	    	response.setMessage("Paziente salvato correttamente");
+     	    	response.setStatusCode(200L);
+     	     }else {
+     	    	response.setEsito("ERROR");
+     	    	response.setMessage("Salvataggio non riuscito");
+     	    	response.setStatusCode(401L);
+     	     }
+    
+        }
+    	return response;
+    	
     }
     
-    public ResponseDTO<?> modificaPaziente(PazienteDTO paziente) throws SQLException {
-    	ResponseDTO<?> response = new ResponseDTO();
-    	String updateQuery = "UPDATE paziente SET cognome = ?, nome = ?, telefono = ?, via = ?, residenza = ?, "
-                + "data_nascita = ?, luogo_nascita = ?, sesso = ?, occupazione = ? WHERE codice_fiscale = ?";
-    	try (Connection conn = dataBaseConnection.getConnection();
-    			PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
-    	    pstmt.setString(1, paziente.getCognome());
-    	    pstmt.setString(2, paziente.getNome());
-    	    pstmt.setString(3, paziente.getNumeroTelefono());
-    	    pstmt.setString(4, paziente.getVia());
-    	    pstmt.setString(5, paziente.getResidenza());
-    	    
-    	    
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyy");
-
-            LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
-    	    
-    	    pstmt.setDate(6, Date.valueOf(localDate));
-    	    pstmt.setString(7, paziente.getLuogoNascita());
-    	    pstmt.setString(8, String.valueOf(paziente.getSesso()));
-    	    pstmt.setString(9, paziente.getOccupazione());
-    	    pstmt.setString(10, paziente.getCodiceFiscale());
-    	    
-    	    int rowsAffected = pstmt.executeUpdate();
-    	    if(rowsAffected > 0) {
-    	    	response.setEsito("OK");
-    	    	response.setMessage("Paziente salvato correttamente");
-    	    	response.setStatusCode(200L);
-    	    }else {
-    	    	response.setEsito("ERROR");
-    	    	response.setMessage("Salvataggio non riuscito");
-    	    	response.setStatusCode(401L);
-    	    }
-    	} 
-		return response;
-	
-    }
+//    public ResponseDTO<?> aggiornaPaziente(Paziente paziente, boolean nuovo) throws SQLException {
+//    	ResponseDTO<?> response = new ResponseDTO();
+//    	if(nuovo) {
+//        	
+//        	String query = "INSERT INTO paziente (cognome, nome, codice_fiscale, telefono, via, residenza, data_nascita, "
+//        			+ "luogo_nascita, sesso, occupazione) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+//        	try (Connection conn = dataBaseConnection.connetti();
+//        			PreparedStatement pstmt = conn.prepareStatement(query)) {
+//        	    pstmt.setString(1, paziente.getCognome());
+//        	    pstmt.setString(2, paziente.getNome());
+//        	    pstmt.setString(3, paziente.getCodiceFiscale());
+//        	    pstmt.setString(4, paziente.getNumeroTelefono());
+//        	    pstmt.setString(5, paziente.getVia());
+//        	    pstmt.setString(6, paziente.getResidenza());
+//        	    
+//                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+//
+//                LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
+//        	    
+//        	    pstmt.setDate(7, Date.valueOf(localDate));
+//        	    pstmt.setString(8, paziente.getLuogoNascita());
+//        	    pstmt.setString(9, String.valueOf(paziente.getSesso()));
+//        	    pstmt.setString(10, paziente.getOccupazione());
+//        	    
+//        	    int rowsAffected = pstmt.executeUpdate();
+//        	    if(rowsAffected > 0) {
+//        	    	response.setEsito("OK");
+//        	    	response.setMessage("Paziente salvato correttamente");
+//        	    	response.setStatusCode(200L);
+//        	    }else {
+//        	    	response.setEsito("ERROR");
+//        	    	response.setMessage("Salvataggio non riuscito");
+//        	    	response.setStatusCode(401L);
+//        	    }
+//        	} 
+//    		return response;
+//    	}else {
+//    		String updateQuery = "UPDATE paziente SET cognome = ?, nome = ?, telefono = ?, via = ?, residenza = ?, "
+//                    + "data_nascita = ?, luogo_nascita = ?, sesso = ?, occupazione = ? WHERE codice_fiscale = ?";
+//        	try (Connection conn = dataBaseConnection.connetti();
+//        			PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
+//        	    pstmt.setString(1, paziente.getCognome());
+//        	    pstmt.setString(2, paziente.getNome());
+//        	    pstmt.setString(3, paziente.getNumeroTelefono());
+//        	    pstmt.setString(4, paziente.getVia());
+//        	    pstmt.setString(5, paziente.getResidenza());
+//        	    
+//        	    
+//                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyy");
+//
+//                LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
+//        	    
+//        	    pstmt.setDate(6, Date.valueOf(localDate));
+//        	    pstmt.setString(7, paziente.getLuogoNascita());
+//        	    pstmt.setString(8, String.valueOf(paziente.getSesso()));
+//        	    pstmt.setString(9, paziente.getOccupazione());
+//        	    pstmt.setString(10, paziente.getCodiceFiscale());
+//        	    
+//        	    int rowsAffected = pstmt.executeUpdate();
+//        	    if(rowsAffected > 0) {
+//        	    	response.setEsito("OK");
+//        	    	response.setMessage("Paziente salvato correttamente");
+//        	    	response.setStatusCode(200L);
+//        	    }else {
+//        	    	response.setEsito("ERROR");
+//        	    	response.setMessage("Salvataggio non riuscito");
+//        	    	response.setStatusCode(401L);
+//        	    }
+//        	} 
+//    		return response;
+//    	}
+//    	
+//    }
     
     public List<PatologiaCura> listaPatologiaCura(String cfPaziente) throws SQLException{
     	List<PatologiaCura> patologiaCuraList = new ArrayList<>();
    	    String query = "SELECT * FROM rel_patologia_cura WHERE cf_paziente = ?";
-	   	 try (Connection conn = dataBaseConnection.getConnection();
+	   	 try (Connection conn = dataBaseConnection.connetti();
 		         PreparedStatement pstmt = conn.prepareStatement(query)) {
 	   		pstmt.setString(1, cfPaziente);
 	   		try (ResultSet rs = pstmt.executeQuery()) {
@@ -257,9 +339,9 @@ public class DataAccessRepository {
 	            			rs.getString("da"),
 	            			rs.getString("a"),
 	            			rs.getString("cf_paziente"),
-	            			Long.valueOf(rs.getInt("patologia")),
-	            			Long.valueOf(rs.getInt("farmaco")),
-	            			Long.valueOf(rs.getInt("id_visita")),null,null));
+	            			new Patologia(Long.valueOf(rs.getInt("patologia"))),
+	            			new Farmaco(Long.valueOf(rs.getInt("farmaco"))),
+	            			Long.valueOf(rs.getInt("id_visita"))));
 	            	
 	            }
 	            return patologiaCuraList;
@@ -270,7 +352,7 @@ public class DataAccessRepository {
     public List<Patologia> listaPatologia() throws SQLException{
     	List<Patologia> patologiaList = new ArrayList<>();
     	String query = "SELECT * FROM patologia";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
 		         PreparedStatement pstmt = conn.prepareStatement(query)) {
 	   		ResultSet rs = pstmt.executeQuery();
 	   		while (rs.next()) {
@@ -288,7 +370,7 @@ public class DataAccessRepository {
     public List<Farmaco> listaFarmaco() throws SQLException{
     	List<Farmaco> farmacoList = new ArrayList<>();
     	String query = "SELECT * FROM farmaco";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
 		         PreparedStatement pstmt = conn.prepareStatement(query)) {
 	   		ResultSet rs = pstmt.executeQuery();
 	   		while (rs.next()) {
@@ -305,7 +387,7 @@ public class DataAccessRepository {
     public Farmaco getFarmacoById(Long idFarmaco) throws SQLException {
     	Farmaco farmaco = new Farmaco();
     	String query = "SELECT * FROM farmaco WHERE id = ?";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
 		         PreparedStatement pstmt = conn.prepareStatement(query)) {
 	   		pstmt.setInt(1, idFarmaco.intValue());
 	   		try (ResultSet rs = pstmt.executeQuery()) {
@@ -326,7 +408,7 @@ public class DataAccessRepository {
     public Patologia getPatologiaById(Long idPatologia) throws SQLException {
     	Patologia patologia = new Patologia();
     	String query = "SELECT * FROM patologia WHERE id = ?";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
 		         PreparedStatement pstmt = conn.prepareStatement(query)) {
 	   		pstmt.setInt(1, idPatologia.intValue());
 	   		try (ResultSet rs = pstmt.executeQuery()) {
@@ -346,7 +428,7 @@ public class DataAccessRepository {
     	ResponseDTO<Long> response = new ResponseDTO<Long>();
     	
     	String query = "INSERT INTO visita (data, cf_paziente, cf_medico, note) VALUES (?, ?, ?, ?)";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
     			PreparedStatement pstmt = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
     	    
     	    pstmt.setString(1, visita.getData());
@@ -378,13 +460,13 @@ public class DataAccessRepository {
     	ResponseDTO<?> response = new ResponseDTO();
     	
     	String query = "INSERT INTO rel_patologia_cura (da, a, cf_paziente, patologia, farmaco, id_visita) VALUES (?, ?, ?, ?, ?, ?)";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
     			PreparedStatement pstmt = conn.prepareStatement(query)) {
     		pstmt.setString(1, entity.getDa());
     		pstmt.setString(2, entity.getA());
     		pstmt.setString(3, entity.getCfPaziente());
-    		pstmt.setLong(4, entity.getPatologia());
-    		pstmt.setLong(5, entity.getFarmaco());
+    		pstmt.setLong(4, entity.getPatologia().getId());
+    		pstmt.setLong(5, entity.getFarmaco().getId());
     		pstmt.setLong(6, entity.getIdVisita());
     		int rowsAffected = pstmt.executeUpdate();
     	    if(rowsAffected > 0) {
@@ -405,7 +487,7 @@ public class DataAccessRepository {
     public List<Visita> getStoricoVisite(String cfPaziente) throws SQLException{
     	List<Visita> storicoVisite = new ArrayList<Visita>();
     	String query = "SELECT * FROM visita WHERE cf_paziente = ?";
-    	try (Connection conn = dataBaseConnection.getConnection();
+    	try (Connection conn = dataBaseConnection.connetti();
 		         PreparedStatement pstmt = conn.prepareStatement(query)) {
     		pstmt.setString(1, cfPaziente);
 	   		try (ResultSet rs = pstmt.executeQuery()) {
@@ -423,6 +505,96 @@ public class DataAccessRepository {
 	   		}
 	   	 }
     }
+    
+    public List<String> listaMedici() throws SQLException{
+    	List<String> listaMedici = new ArrayList<String>();
+    	String query = "SELECT * FROM medico";
+    	try (Connection conn = dataBaseConnection.connetti();
+		         PreparedStatement pstmt = conn.prepareStatement(query)) {
+    		try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	            	String item = rs.getString("codice_fiscale") + "-" + rs.getString("cognome") + "-" + rs.getString("nome");
+	            	listaMedici.add(item);
+	            }
+	            return listaMedici;
+    		}
+    		
+    	}
+    }
+    
+    public void abilitaSostituto(String cfMedico, String dataDal, String dataAl) throws SQLException{
+    	String query = "UPDATE medico SET dal = ?, al = ?, attivo = ? WHERE codice_fiscale = ?";
+	
+		try (Connection conn = dataBaseConnection.connetti();
+	    			PreparedStatement pstmt = conn.prepareStatement(query)) {
+			
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            LocalDate dal = LocalDate.parse(dataDal, formatter);
+            LocalDate al = LocalDate.parse(dataAl, formatter);
+      	    
+			pstmt.setDate(1, Date.valueOf(dal));
+			pstmt.setDate(2, Date.valueOf(al));
+			pstmt.setInt(3, 1);
+			pstmt.setString(4, cfMedico);
+			
+			pstmt.executeUpdate();
+		}
+    }
+    
+    public boolean verificaCf(String cf) throws SQLException {
+    	boolean isPresent = false;
+    
+    	String query = "SELECT * FROM medico WHERE codice_fiscale = ?";
+    	try (Connection conn = dataBaseConnection.connetti();
+    			PreparedStatement pstmt = conn.prepareStatement(query)) {
+    		pstmt.setString(1, cf);
+	   		try (ResultSet rs = pstmt.executeQuery()) {
+	            while (rs.next()) {
+	            	isPresent = true;
+	            }
+	            return isPresent;
+	   		}
+    		
+    	}
+    	
+    }
+    
+    public void updateSostitutoLogin(String cfMedico, String user, String password) throws SQLException {
+    	String query = "UPDATE medico SET username = ?, password = ? WHERE codice_fiscale = ?";
+    	try (Connection conn = dataBaseConnection.connetti();
+    			PreparedStatement pstmt = conn.prepareStatement(query)) {
+		
+				pstmt.setString(1, user);
+				pstmt.setString(2, password);
+				pstmt.setString(3, cfMedico);
+		
+				pstmt.executeUpdate();
+    	}
+    }
+    
+//    public boolean controlloDateLogin(String cf) throws SQLException {
+//    	boolean isLoginValid = false;
+//        
+//    	String query = "SELECT * FROM medico WHERE codice_fiscale = ? AND responsabile != ? AND ?::date BETWEEN	\"dal\" AND \"al\"";
+//    	try (Connection conn = dataBaseConnection.connetti();
+//    			PreparedStatement pstmt = conn.prepareStatement(query)) {
+//    		pstmt.setString(1, cf);
+//    		pstmt.setInt(2, 1);
+//    		
+//            LocalDate date = LocalDate.now();
+//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+//            
+//            String dateString = date.format(formatter);
+//    		pstmt.setString(3, dateString);
+//	   		try (ResultSet rs = pstmt.executeQuery()) {
+//	            while (rs.next()) {
+//	            	isLoginValid = true;
+//	            }
+//	            return isLoginValid;
+//	   		}
+//    		
+//    	}
+//    }
     
 
 }

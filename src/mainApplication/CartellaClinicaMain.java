@@ -6,10 +6,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import dao.DataAccessRepository;
+import dao.EseguiQuery;
 import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Application;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
@@ -49,38 +50,48 @@ import model.Medico;
 import model.ModelPatologiaFarmacoDTO;
 import model.Patologia;
 import model.PatologiaCura;
-import model.PazienteDTO;
+import model.Paziente;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
 import model.UserLoginDTO;
 import model.Visita;
-import service.MainService;
+import service.EventsService;
 
-public class MainApp extends Application implements EventHandler<ActionEvent>{
-
-	private MainService service;
-	private Button button;
-	private Button submitButton;
-	private MenuItem newItem;
+public class CartellaClinicaMain extends Application{
+	 //implements EventHandler<ActionEvent>
+	private EventsService eventService;
+	private Button loginButton;
+	private MenuItem loginItem;
 	private boolean userLoggedIn = false;
 	private String cfMedicoLoggato;
-	private Label titleLabel = new Label("Gestione Cartella Clinica");
-	private PazienteDTO pazienteSelezionato = null;
+	private Label titleLabel;
+	private Paziente pazienteSelezionato = null;
 	private Menu fileMenu;
-	private Menu editMenu;
-	private Menu helpMenu;
+	private Menu pazienteMenu;
+	private Menu sostitutoMenu;
 	private Menu questionMark;
-	private TableView<PazienteDTO> tableRicercaPaziente;
+	private MenuItem accessoItem;
+    private MenuItem logoutItem;
+    private MenuItem ricercaPaziente;
+    private MenuItem inserisciPaziente;
+    private MenuItem dbItem;
+    private MenuItem exitItem; 
+    private boolean tastiRicercaTabDisabled;
+	private TableView<Paziente> tableRicercaPaziente;
 	private PatologiaCura modelForm = null;
+	private Button impostaButton;
+	private boolean cfPrimoAccessoValido;
 	
-	private ObservableList<PazienteDTO> data;
-	private List<PazienteDTO> pazientiRicercaList = new ArrayList<>();
+	private List<String> listaCfMedici;
+	private ObservableList<Paziente> data;
+	private List<Paziente> pazientiRicercaList = new ArrayList<>();
 	private List<PatologiaCura> relPatologiaCuraList = new ArrayList<>();
 	
 	private Map<String, Stage> stageList = new HashMap<String, Stage>();
 	private Map<String, Button> buttonList = new HashMap<String, Button>();
 	private Map<String, MenuItem> menuItemList = new HashMap<String, MenuItem>();
-	//private Map<String, Control> pazienteFields = new HashMap<String, Control>();
+	
+	
 	
 	public static void main(String[] args) {
 		launch(args);
@@ -89,98 +100,86 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 
 	@Override
 	public void start(Stage arg0) throws Exception {
-		this.service = new MainService(new DataAccessRepository());
+		this.eventService = new EventsService(new EseguiQuery());
 		this.stageList.put("mainStage", arg0);
 		arg0.setTitle("Cartella clinica");
 		
 		MenuBar menuBar = new MenuBar();
 		
 	   fileMenu = new Menu("File");
-       editMenu = new Menu("Paziente");
-       helpMenu = new Menu("Sostituto");
+       pazienteMenu = new Menu("Paziente");
+       sostitutoMenu = new Menu("Sostituto");
        questionMark = new Menu("?");
         
-        editMenu.setDisable(!this.userLoggedIn);
-        helpMenu.setDisable(!this.userLoggedIn);
+        pazienteMenu.setDisable(!this.userLoggedIn);
+        sostitutoMenu.setDisable(!this.userLoggedIn);
         questionMark.setDisable(!this.userLoggedIn);
-     // Step 3: Add MenuItems to each Menu
         // File Menu Items
-        newItem = new MenuItem("Login");
-        MenuItem openItem = new MenuItem("Primo accesso");
-        MenuItem saveItem = new MenuItem("Logout");
-        MenuItem dbItem = new MenuItem("Connessione DB");
-        MenuItem exitItem = new MenuItem("Esci");
+        loginItem = new MenuItem("Login");
+        accessoItem = new MenuItem("Primo accesso");
+        logoutItem = new MenuItem("Logout");
+        dbItem = new MenuItem("Connessione DB");
+        exitItem = new MenuItem("Esci");
         
+        logoutItem.setDisable(!this.userLoggedIn);
         // Paziente menu items
-        MenuItem ricercaPaziente = new MenuItem("Ricerca paziente");
-        MenuItem inserisciPaziente = new MenuItem("Inserisci paziente");
+        ricercaPaziente = new MenuItem("Ricerca paziente");
+        inserisciPaziente = new MenuItem("Inserisci paziente");
         this.menuItemList.put("InserisciPazienteItem", inserisciPaziente);
+        
+        MenuItem abilitaSostitutoMenu = new MenuItem("Abilita sostituto");
+        
+        sostitutoMenu.getItems().addAll(abilitaSostitutoMenu);
         // Adding actions to menu items (optional)
         exitItem.setOnAction(e -> arg0.close()); // Close app when 'Exit' is clicked
-        newItem.setOnAction(this);
-        inserisciPaziente.setOnAction(this);
-        ricercaPaziente.setOnAction(e -> {
-        	this.openModaleRicerca();
+        loginItem.setOnAction(e -> {
+        	this.finestraLogin();
         });
-        fileMenu.getItems().addAll(newItem, openItem, saveItem, dbItem, exitItem);
-        editMenu.getItems().addAll(ricercaPaziente, inserisciPaziente);
-     // Step 4: Add Menus to MenuBar
-        menuBar.getMenus().addAll(fileMenu, editMenu, helpMenu, questionMark);
-        // Create layout
+        inserisciPaziente.setOnAction(e -> {
+        	this.finestraInserimentoPaziente(true, null);
+        });
+        ricercaPaziente.setOnAction(e -> {
+        	this.finestraCercaPaziente();
+        });
+        
+        abilitaSostitutoMenu.setOnAction(e -> {
+        	this.abilitaSostituto();
+        });
+        accessoItem.setOnAction(e -> {
+        	this.finestraPrimoAccesso();
+        });
+        
+        fileMenu.getItems().addAll(loginItem, accessoItem, logoutItem, dbItem, exitItem);
+        pazienteMenu.getItems().addAll(ricercaPaziente, inserisciPaziente);
+     
+        menuBar.getMenus().addAll(fileMenu, pazienteMenu, sostitutoMenu, questionMark);
         StackPane layout = new StackPane();
-     // Create the label
         
-        titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;"); 
-        // Add the label to the StackPane
+        titleLabel = new Label("Gestione Cartella Clinica");
+        titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
         layout.getChildren().add(titleLabel);
-
-        // Set the alignment of the label to the top center of the StackPane
         StackPane.setAlignment(titleLabel, Pos.TOP_CENTER);
-     // Step 5: Add the MenuBar to the Scene/Stage layout
         BorderPane root = new BorderPane();
-        root.setTop(menuBar); // Place the menu bar at the top of the layout
+        root.setTop(menuBar);
         
-        // Create the scene with the layout and set it on the primary stage
-        //Scene scene = new Scene(root, 600, 400);
-        //arg0.setScene(scene);
+        logoutItem.setOnAction(e -> {
+        	this.userLoggedIn = false;
+        	pazienteMenu.setDisable(!this.userLoggedIn);
+            sostitutoMenu.setDisable(!this.userLoggedIn);
+            questionMark.setDisable(!this.userLoggedIn);
+            logoutItem.setDisable(!this.userLoggedIn);
+        	StackPane stack = (StackPane)root.getCenter();
+        	this.showTemporaryAlert(stack, "Logged Out", 3000);
+        });
         
-		button = new Button();
-		button.setText("Click");
-		button.setOnAction(this);
-		
-		
-		//layout.getChildren().add(button);
 		Scene scene = new Scene(root, 475, 500);
 		root.setCenter(layout);
 		arg0.setScene(scene);
 		arg0.show();
 		
 	}
-
-	@Override
-	public void handle(ActionEvent arg0) {
-		System.out.println(arg0.toString());
-		System.out.println(arg0.getSource().toString());
-		System.out.println(arg0.getEventType());
-		if(arg0.getSource() == button) {
-			System.out.println("SOURCE EQUALS TO BUTTON");
-		}else if(arg0.getSource() == newItem){
-			System.out.println("SOURCE EQUALS TO Login menu item");
-			System.out.println(arg0.getSource() == newItem);
-			this.openLoginModal();
-		}else if(arg0.getSource().equals(this.menuItemList.get("InserisciPazienteItem"))) {
-			System.out.println("Inserisci paziente tasto cliccato");
-			System.out.println(this.menuItemList.get("InserisciPazienteItem"));
-			this.openInserisciPazienteModal(true, null);
-		}
-//		else if(arg0.getSource().equals(this.buttonList.get("salvaPazienteButton"))){
-//			this.aggiornaInserisciPaziente()
-//		}
-		
-		
-	}
 	
-	private void openInserisciPazienteModal(boolean nuovoPaziente, PazienteDTO pazienteDTO) {
+	private void finestraInserimentoPaziente(boolean nuovoPaziente, Paziente pazienteDTO) {
 		VBox vbox = new VBox(10);
 		Button salvaPaziente = new Button("Aggiorna");
 		this.buttonList.put("salvaPazienteButton", salvaPaziente);
@@ -213,12 +212,10 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         
         StackPane layout = new StackPane();
         Label titoloModale = new Label("Inserimento dati paziente");
-        //titoloModale.setPadding(new Insets(0,0,0,15));
+      
         BorderPane.setAlignment(titoloModale, Pos.TOP_CENTER);
         
-        titoloModale.setStyle("-fx-font-size: 24px;"); 
-        // Add the label to the StackPane
-        //layout.getChildren().add(titoloModale);
+        titoloModale.setStyle("-fx-font-size: 24px;");
         BorderPane root = new BorderPane();
         root.setTop(titoloModale);
         
@@ -238,7 +235,6 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         RadioButton sessoFieldF = new RadioButton("F");
         
         dataNascitaField.setPromptText("dd/MM/yyyy");
-     // Create a ToggleGroup to group the RadioButtons
         ToggleGroup group = new ToggleGroup();
         sessoFieldM.setSelected(true);
         sessoFieldM.setToggleGroup(group);
@@ -262,20 +258,15 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
             	sessoFieldF.setSelected(true);
             }
         }
-       
-        //String sessoValue = null;
-//        group.selectedToggleProperty().addListener((observable, oldValue, newValue) -> {
-//            if (newValue != null) {
-//                RadioButton selected = (RadioButton) newValue;
-//                //sessoValue = selected.getText();
-//            }
-//        });
+
         
         salvaPaziente.setOnAction(e ->{
         	if(codiceFiscaleField.getText().equals("") || cognomeField.getText().equals("") || nomeField.getText().equals("")) {
         		this.showAlertWithMessage("Devi inserire i campi obbligatori!", AlertType.WARNING);
+        	}else if(!this.eventService.isDateValid(dataNascitaField.getText())) {
+        		this.showAlertWithMessage("La data non è valida o non è nel formato corretto", AlertType.WARNING);
         	}else {
-        		PazienteDTO paziente = new PazienteDTO();
+        		Paziente paziente = new Paziente();
     			paziente.setCodiceFiscale(codiceFiscaleField.getText());
     			paziente.setCognome(cognomeField.getText());
     			paziente.setNome(nomeField.getText());
@@ -287,10 +278,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
     			paziente.setNumeroTelefono(numeroTelefonoField.getText());
     			RadioButton selectedRadioButton = (RadioButton) group.getSelectedToggle();
     			paziente.setSesso(selectedRadioButton.getText().charAt(0));
-    			System.out.println(paziente.toString());
-    			System.out.println(codiceFiscaleField.getText());
-    			System.out.println(codiceFiscaleField.getText().getClass());
-    			ResponseDTO<?> response = this.service.salvaPaziente(paziente, nuovoPaziente);
+    			ResponseDTO<?> response = this.eventService.salvaPaziente(paziente, nuovoPaziente);
     			if(response.getStatusCode() == 200) {
     				if(!nuovoPaziente) {
     					this.ricercaPazienti(null, this.tableRicercaPaziente);
@@ -326,16 +314,6 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         row9.setAlignment(Pos.CENTER_RIGHT);
         HBox row10 = new HBox(10, sesso, sessoFieldM, sessoFieldF);
         row10.setAlignment(Pos.CENTER_RIGHT);
-//        row1.getChildren().addAll(codiceFiscale, codiceFiscaleField);
-//        row2.getChildren().addAll(cognome, cognomeField);
-//        row3.getChildren().addAll(nome, nomeField);
-//        row4.getChildren().addAll(dataNascita, dataNascitaField);
-//        row5.getChildren().addAll(luogoNascita, luogoNascitaField);
-//        row6.getChildren().addAll(residenza, residenzaField);
-//        row7.getChildren().addAll(via, viaField);
-//        row8.getChildren().addAll(occupazione, occupazioneField);
-//        row9.getChildren().addAll(numeroTelefono,numeroTelefonoField);
-//        row10.getChildren().addAll(sesso, sessoFieldM, sessoFieldF);
         
         vbox.getChildren().addAll(row1, row2, row3, row4,
         		row5, row6, row7, row8, row9, row10);
@@ -343,7 +321,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         vbox.setMaxWidth(330);   
         vbox.setMaxHeight(400); 
         
-        vbox.setPadding(new Insets(20));  // 20 pixels padding around the VBox
+        vbox.setPadding(new Insets(20)); 
         vbox.setAlignment(Pos.CENTER);  
         
         root.setCenter(vbox);
@@ -358,32 +336,28 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		
 	}
 
-	private void openLoginModal() {
+	private void finestraLogin() {
 		Label nameLabel = new Label("Username:");
         Label passwordLabel = new Label("Password:");
-        submitButton  = new Button();
-//        ResponseDTO response = null;
+        loginButton  = new Button();
+
+        TextField nameField = new TextField();
+        PasswordField passwordField = new PasswordField(); 
         
-        
-        // Create input fields
-        TextField nameField = new TextField();        // Single-line input for name
-        PasswordField passwordField = new PasswordField();  // Single-line masked input for password
-        
-     // Optional: Set Prompt Text (Placeholder Text)
+     
         nameField.setPromptText("Enter your name");
         passwordField.setPromptText("Enter your password");
         
-     // Action when the button is clicked (retrieve values from input fields)
-        submitButton.setOnAction(e -> {
-            String username = nameField.getText(); // Retrieve name input
-            String password = passwordField.getText(); // Retrieve password input
+    
+        loginButton.setOnAction(e -> {
+            String username = nameField.getText();
+            String password = passwordField.getText();
 
+            //ResponseDTO<?> res = this.eventService.controlloDateSostituto(username, password);
             UserLoginDTO user = new UserLoginDTO();
             user.setUsername(username);
-            System.out.println("Username: " + username);
             user.setPassword(password);
-            System.out.println("Password: " + password);
-            ResponseDTO<?> response = this.service.login(user);
+            ResponseDTO<?> response = this.eventService.login(user);
             if(response.getStatusCode() != 200L) {
             	if(response.getStatusCode() != 500L) {
             		this.showAlertWithMessage(response.getMessage(), AlertType.WARNING);
@@ -393,28 +367,22 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
             	this.stageList.get("loginStage").close();
 
             	this.cfMedicoLoggato = (String)response.getData().get(0);
-            	editMenu.setDisable(!this.userLoggedIn);
-                helpMenu.setDisable(!this.userLoggedIn);
+            	pazienteMenu.setDisable(!this.userLoggedIn);
+                sostitutoMenu.setDisable(!this.userLoggedIn);
                 questionMark.setDisable(!this.userLoggedIn);
+                logoutItem.setDisable(!this.userLoggedIn);
                 
                 BorderPane root = (BorderPane) this.stageList.get("mainStage").getScene().getRoot();
                 StackPane stack = (StackPane)root.getCenter();
                 this.showTemporaryAlert(stack, "Accesso effettuato", 3000);
-//                Label accessTitleLabel = new Label(response.getMessage());
-//                accessTitleLabel.setStyle("-fx-font-size: 20px;"); 
-//                stack.getChildren().remove(this.titleLabel);
-//                StackPane.setAlignment(accessTitleLabel, Pos.CENTER);
-//                stack.getChildren().add(accessTitleLabel);
-//                root.setCenter(stack);
+
                 
             }
         });
-        // Arrange the components in a VBox layout
-        VBox vbox = new VBox(10); // 10px spacing between elements
+        VBox vbox = new VBox(10); 
         vbox.getChildren().addAll(nameLabel, nameField, passwordLabel, passwordField);
         
-     // Add padding around the VBox to create space between the inputs and the window border
-        vbox.setPadding(new Insets(20, 20, 20, 20)); // 20px padding on all sides (top, right, bottom, left)
+        vbox.setPadding(new Insets(20, 20, 20, 20));
 
         
         BorderPane root = new BorderPane();
@@ -425,10 +393,10 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		arg1.setTitle("Parametri Login");
 		
 		
-		submitButton.setText("Login");
+		loginButton.setText("Login");
 		
 		StackPane layout = new StackPane();
-		layout.getChildren().add(submitButton);
+		layout.getChildren().add(loginButton);
 		layout.setPadding(new Insets(0, 0, 20, 0));
 		root.setBottom(layout);
 		Scene scene = new Scene(root, 300, 210);
@@ -438,35 +406,33 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 	}
 	
 	private void showAlertWithMessage(String message, AlertType type) {
-		// Create an information alert
         Alert alert = new Alert(type);
         alert.setTitle("Messaggio");
-        alert.setHeaderText(null);  // No header
+        alert.setHeaderText(null);
         alert.setContentText(message);
 
-        // Show the alert and wait for user interaction
         alert.showAndWait();
 	}
 	
 	private void showTemporaryAlert(StackPane parent, String message, int durationMillis) {
-        // Create the label for the alert
         Label alertLabel = new Label(message);
         alertLabel.setStyle("-fx-background-color: lightgreen; -fx-border-color: black; -fx-padding: 10px;");
 
-        // Add the label to the parent container
         parent.getChildren().add(alertLabel);
 
-        // Create a PauseTransition to remove the label after a specified duration
         PauseTransition pause = new PauseTransition(Duration.millis(durationMillis));
         pause.setOnFinished(event -> parent.getChildren().remove(alertLabel));
         pause.play();
     }
 	
-	private void openModaleRicerca() {
+	private void finestraCercaPaziente() {
+		this.tastiRicercaTabDisabled = true;
 		this.pazientiRicercaList.clear();
 		Button ricercaPaziente = new Button("Cerca");
 		Button cartellaClinica = new Button("Cartella Clinica");
 		Button datiAnagrafici = new Button("Dati Anagrafici");
+		cartellaClinica.setDisable(this.tastiRicercaTabDisabled);
+		datiAnagrafici.setDisable(this.tastiRicercaTabDisabled);
 		this.buttonList.put("ricercaPazienteButton", ricercaPaziente);
 		this.buttonList.put("cartellaClinicaButton", cartellaClinica);
 		this.buttonList.put("datiAnagraficiButton", datiAnagrafici);
@@ -475,14 +441,10 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         this.stageList.put("ricercaPazienteStage", stage);
         stage.setTitle("Ricerca");
         
-        //StackPane layout = new StackPane();
         Label titoloModale = new Label("Ricerca paziente");
-        //titoloModale.setPadding(new Insets(0,0,0,15));
         BorderPane.setAlignment(titoloModale, Pos.TOP_CENTER);
         
-        titoloModale.setStyle("-fx-font-size: 24px;"); 
-        // Add the label to the StackPane
-        //layout.getChildren().add(titoloModale);
+        titoloModale.setStyle("-fx-font-size: 24px;");
         BorderPane root = new BorderPane();
         root.setTop(titoloModale);
         
@@ -526,30 +488,27 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         vbox.setMaxWidth(400);   
         vbox.setMaxHeight(400); 
         
-        vbox.setPadding(new Insets(20));  // 20 pixels padding around the VBox
+        vbox.setPadding(new Insets(20));
         vbox.setAlignment(Pos.CENTER);  
         
         
 		
 		// ############## TABLE ################
 		
-		TableView<PazienteDTO> table = new TableView<>();
+		TableView<Paziente> table = new TableView<>();
 		table.setColumnResizePolicy(TableView.UNCONSTRAINED_RESIZE_POLICY);
 		
 		
-		TableColumn<PazienteDTO, Integer> codiceColumn = new TableColumn<>("Codice Fiscale");
+		TableColumn<Paziente, Integer> codiceColumn = new TableColumn<>("Codice Fiscale");
         codiceColumn.setCellValueFactory(new PropertyValueFactory<>("codiceFiscale"));
         codiceColumn.setPrefWidth(140);
-		TableColumn<PazienteDTO, String> cognomeColumn = new TableColumn<>("Cognome");
+		TableColumn<Paziente, String> cognomeColumn = new TableColumn<>("Cognome");
 		cognomeColumn.setCellValueFactory(new PropertyValueFactory<>("cognome"));
 		cognomeColumn.setPrefWidth(120);
-        TableColumn<PazienteDTO, String> nomeColumn = new TableColumn<>("Nome");
+        TableColumn<Paziente, String> nomeColumn = new TableColumn<>("Nome");
         nomeColumn.setCellValueFactory(new PropertyValueFactory<>("nome"));
         nomeColumn.setPrefWidth(95);
 
-        
-
-        // Add columns to the table
         table.getColumns().add(codiceColumn);
         table.getColumns().add(cognomeColumn);
         table.getColumns().add(nomeColumn);
@@ -563,6 +522,10 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
     		ricerca.setNome(nomeField.getText());
     		ricerca.setPatologia(patologiaField.getText());
         	this.ricercaPazienti(ricerca, table);
+        	this.pazienteSelezionato = null;
+        	this.tastiRicercaTabDisabled = false;
+        	cartellaClinica.setDisable(false);
+    		datiAnagrafici.setDisable(false);
         	
         });
         
@@ -575,7 +538,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         
         // PER IL CLICK DELLA ROW
         table.setRowFactory(tv -> {
-            TableRow<PazienteDTO> row = new TableRow<>();
+            TableRow<Paziente> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
                 if (!row.isEmpty() && event.getClickCount() == 1) {
                     this.pazienteSelezionato = row.getItem();
@@ -591,7 +554,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         Scene scene = new Scene(root, 400, 420);
         datiAnagrafici.setOnAction(e -> {
         	if(this.pazienteSelezionato != null) {
-        		this.openDatiAnagrafici(this.pazienteSelezionato);
+        		this.finestraInserimentoPaziente(false, this.pazienteSelezionato);
         	}else {
         		this.showAlertWithMessage("E' necessario selezionare almeno una riga", AlertType.INFORMATION);
         	}
@@ -599,7 +562,9 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         });
         cartellaClinica.setOnAction(e -> {
         	if(this.pazienteSelezionato != null) {
-        		this.openCartellaClinicaModale(this.pazienteSelezionato);
+        		this.finestraCartella(this.pazienteSelezionato);
+        	}else {
+        		this.showAlertWithMessage("E' necessario selezionare almeno una riga", AlertType.INFORMATION);
         	}
         });
         stage.setScene(scene);
@@ -607,22 +572,24 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		
 	}
 	
-	private void openDatiAnagrafici(PazienteDTO paziente) {
-		this.openInserisciPazienteModal(false, paziente);
+//	private void openDatiAnagrafici(Paziente paziente) {
+//		this.finestraInserimentoPaziente(false, paziente);
 //		TextField textField = (TextField) scene.lookup("#codiceFiscaleField");
-
-	}
+//
+//	}
 	
-	private void openCartellaClinicaModale(PazienteDTO paziente) {
+	private void finestraCartella(Paziente paziente) {
 		this.relPatologiaCuraList.clear();
 		Stage stage = new Stage();
 		this.stageList.put("cartellaClinicaStage", stage);
 		stage.setTitle("Cartella Clinica Paziente");
-		List<Patologia> listaPatologie = this.service.getPatologiaList().getData();
-		List<Farmaco> listaFarmaci = this.service.getFarmacoList().getData();
-		//List<PatologiaCura> patologiaCuraList = new ArrayList<>();
-		//List<PatologiaCura> patologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
-		this.relPatologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+		List<Patologia> listaPatologie = this.eventService.getPatologiaList().getData();
+		List<Farmaco> listaFarmaci = this.eventService.getFarmacoList().getData();
+		this.relPatologiaCuraList = this.eventService.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+		
+		Button storico = new Button("Storico");
+        Button stampa = new Button("Stampa");
+        Button salva = new Button("Salva");
 		
 		Label titoloModale = new Label("Cartella Clinica Paziente");
 		titoloModale.setPadding(new Insets(5,0,20,0));
@@ -667,21 +634,13 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         patologia.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         ComboBox<Patologia> patologiaField = new ComboBox<>();
         patologiaField.setItems(FXCollections.observableArrayList(listaPatologie));
-//        patologiaField.setItems(FXCollections.observableArrayList(
-//            listaPatologie.stream()
-//            .map(p -> p.getNome())
-//            .collect(Collectors.toList())
-//        ));
+
         patologiaField.setValue(listaPatologie.get(0));
         Label cura = new Label("Cura:");
         cura.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         ComboBox<Farmaco> curaField = new ComboBox<>();
         curaField.setItems(FXCollections.observableArrayList(listaFarmaci));
-//        curaField.setItems(FXCollections.observableArrayList(
-//                this.service.getFarmacoList().getData().stream()
-//                .map(p -> p.getNome())
-//                .collect(Collectors.toList())
-//            ));
+
         curaField.setValue(listaFarmaci.get(0));
         Button aggiungi = new Button("Aggiungi");
         Button elimina = new Button("Elimina");
@@ -703,16 +662,19 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		TableColumn<PatologiaCura, String> dataAColumn = new TableColumn<>("Data A");
 		dataAColumn.setCellValueFactory(new PropertyValueFactory<>("a"));
 		dataAColumn.setPrefWidth(130);
-        TableColumn<PatologiaCura, String> patologiaColumn = new TableColumn<>("Patologia");
-        patologiaColumn.setCellValueFactory(new PropertyValueFactory<>("patologiaNome"));
-        patologiaColumn.setPrefWidth(155);
-        TableColumn<PatologiaCura, String> farmacoColumn = new TableColumn<>("Farmaco");
-        farmacoColumn.setCellValueFactory(new PropertyValueFactory<>("farmacoNome"));
-        farmacoColumn.setPrefWidth(155);
+		
+		TableColumn<PatologiaCura, String> patologiaColumn = new TableColumn<>("Patologia");
+		patologiaColumn.setCellValueFactory(cellData -> 
+		    new SimpleStringProperty(cellData.getValue().getPatologia().getNome())
+		);
+		patologiaColumn.setPrefWidth(155);
 
-        
-
-        // Add columns to the table
+		TableColumn<PatologiaCura, String> farmacoColumn = new TableColumn<>("Farmaco");
+		farmacoColumn.setCellValueFactory(cellData -> 
+		    new SimpleStringProperty(cellData.getValue().getFarmaco().getNome())
+		);
+		farmacoColumn.setPrefWidth(155);
+ 
         table.getColumns().add(dataDaColumn);
         table.getColumns().add(dataAColumn);
         table.getColumns().add(patologiaColumn);
@@ -722,17 +684,17 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         vbox.getChildren().addAll(table);
         
         aggiungi.setOnAction(e -> {
-        	if(!this.service.isDateValid(dataFarmacoAField.getText()) || !this.service.isDateValid(dataFarmacoDaField.getText())
-        			|| !this.service.isDateValid(dataField.getText())) {
+        	if(!this.eventService.isDateValid(dataFarmacoAField.getText()) || !this.eventService.isDateValid(dataFarmacoDaField.getText())
+        			|| !this.eventService.isDateValid(dataField.getText())) {
         		this.showAlertWithMessage("Alcune date non sono valide o non sono nel formato corretto", AlertType.WARNING);
         	}else {
-        		String patologiaEntity = this.service.getPatologiaById(patologiaField.getValue().getId()).getPatologia().getNome();
-        		String farmacoEntity = this.service.getFarmacoById(curaField.getValue().getId()).getFarmaco().getNome();
+        		Patologia patologiaEntity = this.eventService.getPatologiaById(patologiaField.getValue().getId()).getPatologia();
+        		Farmaco farmacoEntity = this.eventService.getFarmacoById(curaField.getValue().getId()).getFarmaco();
         		PatologiaCura patologiaCura = new PatologiaCura();
             	patologiaCura.setA(dataFarmacoAField.getText());
             	patologiaCura.setDa(dataFarmacoDaField.getText());
-            	patologiaCura.setPatologiaNome(patologiaEntity);
-            	patologiaCura.setFarmacoNome(farmacoEntity);
+            	patologiaCura.setPatologia(patologiaEntity);
+            	patologiaCura.setFarmaco(farmacoEntity);
             	
             	this.addItemsToTable(table, dataTableCartella, patologiaCura, this.relPatologiaCuraList);
             	this.modelForm = patologiaCura;
@@ -750,25 +712,21 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         noteRow.setAlignment(Pos.CENTER);
         vbox.getChildren().addAll(noteRow);
         
-        Button storico = new Button("Storico");
-        Button stampa = new Button("Stampa");
-        Button salva = new Button("Salva");
-        
         salva.setOnAction(e -> {
         	if(this.modelForm != null) {
         		Long idVisita = this.salvaVisita(paziente, dataField.getText(), noteField.getText());
             	if(idVisita != null) {
-            		Long patologiaId = this.service.getPatologiaById(patologiaField.getValue().getId()).getPatologia().getId();
-            		Long farmacoId = this.service.getFarmacoById(curaField.getValue().getId()).getFarmaco().getId();
+            		Patologia patologiaEntity = this.eventService.getPatologiaById(patologiaField.getValue().getId()).getPatologia();
+            		Farmaco farmacoEntity = this.eventService.getFarmacoById(curaField.getValue().getId()).getFarmaco();
             		PatologiaCura patologiaCura = new PatologiaCura();
                 	patologiaCura.setA(dataFarmacoAField.getText());
                 	patologiaCura.setDa(dataFarmacoDaField.getText());
-                	patologiaCura.setPatologia(patologiaId);
-                	patologiaCura.setFarmaco(farmacoId);
+                	patologiaCura.setPatologia(patologiaEntity);
+                	patologiaCura.setFarmaco(farmacoEntity);
                 	patologiaCura.setIdVisita(idVisita);
                 	patologiaCura.setCfPaziente(paziente.getCodiceFiscale());
-                	this.service.salvaRel(patologiaCura);
-                	this.relPatologiaCuraList = this.service.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+                	this.eventService.salvaRel(patologiaCura);
+                	this.relPatologiaCuraList = this.eventService.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
                 	
             	}
         	}else {
@@ -777,7 +735,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         	
         });
         storico.setOnAction(e -> {
-        	this.openStoricoVisiteModal(paziente);
+        	this.finestraStoricoVisite(paziente);
         });
         HBox rowButtonEnd = new HBox(15, storico, stampa, salva);
         rowButtonEnd.setAlignment(Pos.CENTER);
@@ -792,10 +750,10 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
  	
 	}
 	
-	private void openStoricoVisiteModal(PazienteDTO paziente) {
+	private void finestraStoricoVisite(Paziente paziente) {
 		Stage stage = new Stage();
         stage.setTitle("Ricerca");
-        List<Visita> storicoVisite = this.service.getStoricoVisite(paziente.getCodiceFiscale()).getData();
+        List<Visita> storicoVisite = this.eventService.getStoricoVisite(paziente.getCodiceFiscale()).getData();
 		 
 		Label titoloModale = new Label("Storico Visite");
         //titoloModale.setPadding(new Insets(0,0,0,15));
@@ -854,17 +812,163 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		
 	}
 	
-	private void ricercaPazienti(RicercaPazienteDTO ricerca, TableView<PazienteDTO> table) {
+	private void abilitaSostituto() {
+		this.listaCfMedici = this.eventService.listaMedici().getData();
+		Stage stage = new Stage();
+		this.stageList.put("abilitaSostitutoStage", stage);
+		stage.setTitle("Abilita Sostituto");
+		Button abilita = new Button("Abilita");
+		
+		Label titoloModale = new Label("Abilita Sostituto");
+		titoloModale.setPadding(new Insets(5,0,20,0));
+        BorderPane.setAlignment(titoloModale, Pos.TOP_CENTER);
+        
+        titoloModale.setStyle("-fx-font-size: 20px;"); 
+        
+        BorderPane root = new BorderPane();
+        root.setTop(titoloModale);
+        
+//        Label cura = new Label("Cura:");
+//        cura.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        ComboBox<String> cfMedicoField = new ComboBox<>();
+        cfMedicoField.setItems(FXCollections.observableArrayList(this.listaCfMedici));
+
+        
+        //curaField.setValue(this.listaCfMedici.get(0));
+        
+        Label dataDal = new Label("Dal:");
+        dataDal.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextField dataDalField = new TextField();
+        dataDalField.setPromptText("dd/MM/yyyy");
+        Label dataAl = new Label("Al:");
+        dataAl.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
+        TextField dataAlField = new TextField();
+        dataAlField.setPromptText("dd/MM/yyyy");
+        HBox rowDataDaA = new HBox(10, cfMedicoField, dataDal, dataDalField, dataAl, dataAlField);
+        rowDataDaA.setAlignment(Pos.CENTER);
+        HBox abilitaRow = new HBox(20, abilita);
+        abilitaRow.setAlignment(Pos.CENTER);
+        VBox vbox = new VBox(35, rowDataDaA, abilitaRow);
+        abilita.setOnAction(e -> {
+        	if(!this.eventService.isDateValid(dataDalField.getText()) || !this.eventService.isDateValid(dataAlField.getText())) {
+        		this.showAlertWithMessage("Le date non sono valide o non sono nel formato corretto", AlertType.WARNING);
+        	}else if(cfMedicoField.getValue() == null || "".equals(cfMedicoField.getValue())){
+        		this.showAlertWithMessage("Selezionare un medico da abilitare", AlertType.WARNING);
+        	}
+        	else {
+        		ResponseDTO<?> response = this.eventService.abilitaSostituto(cfMedicoField.getValue(), dataDalField.getText(), dataAlField.getText());
+        		if(response.getStatusCode() == 200) {
+        			BorderPane mainRoot = (BorderPane) this.stageList.get("mainStage").getScene().getRoot();
+                    StackPane stack = (StackPane)mainRoot.getCenter();
+                    this.stageList.get("abilitaSostitutoStage").close();
+                    this.showTemporaryAlert(stack, response.getMessage(), 3000);
+        		}
+        	}
+        });
+        root.setCenter(vbox);
+        Scene scene = new Scene(root, 650, 180);
+        stage.setScene(scene);
+        stage.show();
+  
+	}
+	
+	public void finestraPrimoAccesso() {
+		this.cfPrimoAccessoValido = false;
+		Label cfLabel = new Label("Codice Fiscale:");
+		Label userLabel = new Label("*User:");
+        Label passwordLabel = new Label("*Password:");
+        Label confermaPasswordLabel = new Label("*Conferma Password:");
+        this.impostaButton  = new Button();
+        Button cerca = new Button();
+        cerca.setText("Cerca");
+        this.impostaButton.setText("Imposta");
+
+        TextField cfField = new TextField();
+        PasswordField passwordField = new PasswordField(); 
+        PasswordField confermaPasswordField = new PasswordField(); 
+        TextField userField = new TextField();
+        
+        passwordField.setDisable(!this.cfPrimoAccessoValido);
+        confermaPasswordField.setDisable(!this.cfPrimoAccessoValido);
+        userField.setDisable(!this.cfPrimoAccessoValido);
+        this.impostaButton.setDisable(!this.cfPrimoAccessoValido);
+        HBox row1 = new HBox(10, cfLabel, cfField);
+        row1.setAlignment(Pos.CENTER_RIGHT);
+        HBox row2 = new HBox(10, cerca);
+        row2.setAlignment(Pos.CENTER);
+        HBox row3 = new HBox(10, userLabel, userField);
+        row3.setAlignment(Pos.CENTER_RIGHT);
+        HBox row4 = new HBox(10, passwordLabel, passwordField);
+        row4.setAlignment(Pos.CENTER_RIGHT);
+        HBox row5 = new HBox(10, confermaPasswordLabel, confermaPasswordField);
+        row5.setAlignment(Pos.CENTER_RIGHT);
+        HBox row6 = new HBox(10, this.impostaButton);
+        row6.setAlignment(Pos.CENTER);
+        VBox vbox = new VBox(15); 
+        vbox.getChildren().addAll(row1, row2, row3, row4, row5, row6);
+        
+        vbox.setPadding(new Insets(20, 20, 20, 20));
+
+        
+        Label titoloModale = new Label("Dati per il primo accesso");
+		titoloModale.setPadding(new Insets(5,0,20,0));
+        BorderPane.setAlignment(titoloModale, Pos.TOP_CENTER);
+        
+        titoloModale.setStyle("-fx-font-size: 20px;"); 
+        
+        
+        
+        BorderPane root = new BorderPane();
+        root.setCenter(vbox);
+        root.setTop(titoloModale);
+        
+		Stage arg1 = new Stage();
+		this.stageList.put("primoAccesso", arg1);
+		arg1.setTitle("Parametri LoginAccesso");
+		
+		cerca.setOnAction(e ->{
+			if(cfField.getText() == null || "".equals(cfField.getText())) {
+				this.showAlertWithMessage("Inserire un Codice Fiscale", AlertType.WARNING);
+			}else {
+				ResponseDTO<?> response = this.eventService.isCfValid(cfField.getText());
+				if(response.getStatusCode() == 200L) {
+					this.cfPrimoAccessoValido = true;
+					passwordField.setDisable(!this.cfPrimoAccessoValido);
+			        confermaPasswordField.setDisable(!this.cfPrimoAccessoValido);
+			        userField.setDisable(!this.cfPrimoAccessoValido);
+			        this.impostaButton.setDisable(!this.cfPrimoAccessoValido);
+				}else if(response.getStatusCode() == 404L){
+					this.showAlertWithMessage(response.getMessage(), AlertType.WARNING);
+				}
+			}
+		});
+		this.impostaButton.setOnAction(e -> {
+			if("".equals(passwordField.getText()) || "".equals(confermaPasswordField.getText()) || "".equals(userField.getText())) {
+				this.showAlertWithMessage("Inserire i campi obbligatori", AlertType.WARNING);
+			}else if(!passwordField.getText().equals(confermaPasswordField.getText())){
+				this.showAlertWithMessage("Le password non coincidono tra di loro", AlertType.WARNING);
+			}else {
+				this.eventService.updateSostitutoLogin(cfField.getText(), userField.getText(), confermaPasswordField.getText());
+				arg1.close();
+			}
+		});
+		
+		Scene scene = new Scene(root, 350, 350);
+		arg1.setScene(scene);
+		arg1.show();
+	}
+	
+	private void ricercaPazienti(RicercaPazienteDTO ricerca, TableView<Paziente> table) {
 		if(ricerca == null || (ricerca.getCodiceFiscale().equals("") && ricerca.getCognome().equals("") && ricerca.getNome().equals("") 
     			&& ricerca.getPatologia().equals(""))) {
-    		ResponseDTO<PazienteDTO> response = this.service.getListaPazienti(null);
+    		ResponseDTO<Paziente> response = this.eventService.getListaPazienti(null);
     		if(response != null && response.getData().size() > 0) {
     			this.pazientiRicercaList = response.getData();
     		}
     		
     	}else {
     		
-    		ResponseDTO<PazienteDTO> response = this.service.getListaPazienti(ricerca);
+    		ResponseDTO<Paziente> response = this.eventService.getListaPazienti(ricerca);
     		if(response != null && response.getData() != null) {
     			this.pazientiRicercaList = response.getData();
     		}
@@ -886,7 +990,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
 		table.setItems(dataTableCartella);
 	}
 	
-	private Long salvaVisita(PazienteDTO paziente, String data, String note) {
+	private Long salvaVisita(Paziente paziente, String data, String note) {
 		Long idVisita = null;
 		if(this.cfMedicoLoggato != null) {
     		Visita visita = new Visita();
@@ -894,7 +998,7 @@ public class MainApp extends Application implements EventHandler<ActionEvent>{
         	visita.setCfPaziente(paziente.getCodiceFiscale());
         	visita.setData(data);
         	visita.setNote(note);
-        	ResponseDTO<?> response = this.service.salvaVisita(visita);
+        	ResponseDTO<?> response = this.eventService.salvaVisita(visita);
         	if(response.getStatusCode() == 200L) {
         		idVisita = response.getId();
         		this.showAlertWithMessage(response.getMessage(), AlertType.CONFIRMATION);

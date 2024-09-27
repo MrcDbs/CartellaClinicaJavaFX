@@ -7,7 +7,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
-import dao.DataAccessRepository;
+import dao.EseguiQuery;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Pos;
@@ -24,19 +24,19 @@ import model.ListModelDTO;
 import model.ModelPatologiaFarmacoDTO;
 import model.Patologia;
 import model.PatologiaCura;
-import model.PazienteDTO;
+import model.Paziente;
 import model.ResponseDTO;
 import model.RicercaPazienteDTO;
 import model.UserLoginDTO;
 import model.Visita;
 
-public class MainService {
+public class EventsService {
 	
-	private DataAccessRepository repository;
+	private EseguiQuery repository;
 	
 	
 
-	public MainService(DataAccessRepository repository) {
+	public EventsService(EseguiQuery repository) {
 		super();
 		this.repository = repository;
 	}
@@ -50,7 +50,7 @@ public class MainService {
 	public ResponseDTO<?> login(UserLoginDTO user) {
 		ResponseDTO<?> response = new ResponseDTO();
 		try {
-			response = this.repository.login(user);
+			response = this.repository.verificaLogin(user);
 		} catch (SQLException e) {
 			response.setData(null);
 			response.setEsito("ERROR");
@@ -60,22 +60,13 @@ public class MainService {
 		}
 		return response;
 	}
+
 	
-//	public ResponseDTO salvaPaziente(PazienteDTO paziente) {
-//		ResponseDTO response = new ResponseDTO();
-//		response.setStatusCode(200L);
-//		response.setMessage("Paziente salvato correttamente");
-//		return response;
-//	}
-	
-	public ResponseDTO<?> salvaPaziente(PazienteDTO paziente, boolean nuovo) {
+	public ResponseDTO<?> salvaPaziente(Paziente paziente, boolean nuovo) {
 		ResponseDTO<?> response = new ResponseDTO();
 		try {
-			if(nuovo) {
-				response = this.repository.salvaPaziente(paziente);
-			}else {
-				response = this.repository.modificaPaziente(paziente);
-			}
+			response = this.repository.aggiornaPaziente(paziente, nuovo);
+			
 		} catch (SQLException e) {
 			response.setData(null);
 			response.setEsito("ERROR");
@@ -87,11 +78,11 @@ public class MainService {
 	}
 	
 	
-	public ResponseDTO<PazienteDTO> getListaPazienti(RicercaPazienteDTO ricerca) {
-		ResponseDTO<PazienteDTO> response = new ResponseDTO<PazienteDTO>();
+	public ResponseDTO<Paziente> getListaPazienti(RicercaPazienteDTO ricerca) {
+		ResponseDTO<Paziente> response = new ResponseDTO<Paziente>();
 		
 		try {
-			List<PazienteDTO> result = this.repository.getPazienti(ricerca);
+			List<Paziente> result = this.repository.ricercaPazienti(ricerca);
 			//model = new ListModelDTO<PazienteDTO>(result);
 			response.setData(result);
 			response.setEsito("OK");
@@ -152,10 +143,10 @@ public class MainService {
 		try {
 			List<PatologiaCura> result = this.repository.listaPatologiaCura(cfPaziente);
 			result.stream().forEach(rel -> {
-				String nomeFarmaco = this.getFarmacoById(rel.getFarmaco()).getFarmaco().getNome();
-				String nomePatologia = this.getPatologiaById(rel.getPatologia()).getPatologia().getNome();
-				rel.setFarmacoNome(nomeFarmaco);
-				rel.setPatologiaNome(nomePatologia);
+				String nomeFarmaco = this.getFarmacoById(rel.getFarmaco().getId()).getFarmaco().getNome();
+				String nomePatologia = this.getPatologiaById(rel.getPatologia().getId()).getPatologia().getNome();
+				rel.getFarmaco().setNome(nomeFarmaco);
+				rel.getPatologia().setNome(nomePatologia);
 			});
 			response.setData(result);
 			response.setEsito("OK");
@@ -275,6 +266,108 @@ public class MainService {
 		}
 		return response;
 	}
+	
+	public ResponseDTO<String> listaMedici(){
+		ResponseDTO<String> response = new ResponseDTO<String>();
+		try {
+			response.setData(this.repository.listaMedici());
+			response.setEsito("ERROR");
+			response.setMessage("Dati recuperati con successo");
+			response.setStatusCode(200L);
+			
+		} catch (SQLException e) {
+			response.setData(null);
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+	}
+	
+	public ResponseDTO<?> abilitaSostituto(String cfMedico, String dataDal, String dataAl) {
+		ResponseDTO<?> response = new ResponseDTO();
+		String cf = cfMedico.split("-")[0];
+		try {
+			this.repository.abilitaSostituto(cf, dataDal, dataAl);
+			response.setEsito("OK");
+			response.setMessage("Medico con Codice Fiscale " + cf + " abilitato");
+			response.setStatusCode(200L);
+			
+		} catch (SQLException e) {
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+		
+		
+	}
+
+	public ResponseDTO<?> isCfValid(String cf) {
+		ResponseDTO<?> response = new ResponseDTO();
+		try {
+			if(this.repository.verificaCf(cf)) {
+				response.setEsito("OK");
+				response.setMessage("Codice Fiscale valido");
+				response.setStatusCode(200L);
+			}else {
+				response.setEsito("NOT FOUND");
+				response.setMessage("Codice Fiscale non trovato o non valido");
+				response.setStatusCode(404L);
+			}
+			
+			
+		} catch (SQLException e) {
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+		
+	}
+	
+	public ResponseDTO<?> updateSostitutoLogin(String cf, String user, String password){
+		ResponseDTO<?> response = new ResponseDTO();
+		try {
+			this.repository.updateSostitutoLogin(cf, user, password);
+			response.setEsito("OK");
+			response.setMessage("Utente registrato");
+			response.setStatusCode(200L);
+			
+		} catch (SQLException e) {
+			response.setEsito("ERROR");
+			response.setMessage(e.getMessage());
+			response.setStatusCode(500L);
+			e.printStackTrace();
+		}
+		return response;
+	}
+	
+//	public ResponseDTO<?> controlloDateSostituto(String user, String) {
+//		ResponseDTO<?> response = new ResponseDTO();
+//		try {
+//			if(this.repository.controlloDateLogin(cf)) {
+//				response.setEsito("OK");
+//				response.setMessage("Utente ancora abilitato");
+//				response.setStatusCode(200L);
+//			}else {
+//				response.setEsito("FORBIDDEN");
+//				response.setMessage("Utente non abilitato");
+//				response.setStatusCode(403L);
+//			}
+//			
+//			
+//		} catch (SQLException e) {
+//			response.setEsito("ERROR");
+//			response.setMessage(e.getMessage());
+//			response.setStatusCode(500L);
+//			e.printStackTrace();
+//		}
+//		return response;
+//	}
 	
 	
 }

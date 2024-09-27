@@ -19,6 +19,13 @@ public class Patologia {
 		this.cause = cause;
 		this.effetti = effetti;
 	}
+	
+	
+
+	public Patologia(Long id) {
+		super();
+		this.id = id;
+	}
 
 	public Long getId() {
 		return id;

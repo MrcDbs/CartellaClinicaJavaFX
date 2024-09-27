@@ -1,6 +1,6 @@
 package model;
 
-public class PazienteDTO{
+public class Paziente{
 	
 	private String codiceFiscale;
 	private String cognome;
@@ -13,7 +13,7 @@ public class PazienteDTO{
 	private String numeroTelefono;
 	private char sesso;
 	
-	public PazienteDTO() {
+	public Paziente() {
 		super();
 		// TODO Auto-generated constructor stub
 	}
@@ -21,7 +21,7 @@ public class PazienteDTO{
 	
 	
 
-	public PazienteDTO(String codiceFiscale, String cognome, String nome, String dataNascita, String luogoNascita,
+	public Paziente(String codiceFiscale, String cognome, String nome, String dataNascita, String luogoNascita,
 			String residenza, String via, String occupazione, String numeroTelefono, char sesso) {
 		super();
 		this.codiceFiscale = codiceFiscale;
@@ -39,7 +39,7 @@ public class PazienteDTO{
 
 
 
-	public PazienteDTO(String codiceFiscale, String cognome, String nome) {
+	public Paziente(String codiceFiscale, String cognome, String nome) {
 		super();
 		this.codiceFiscale = codiceFiscale;
 		this.cognome = cognome;

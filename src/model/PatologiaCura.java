@@ -5,11 +5,9 @@ public class PatologiaCura {
 	private String da;
 	private String a;
 	private String cfPaziente;
-	private Long patologia;
-	private Long farmaco;
+	private Patologia patologia;
+	private Farmaco farmaco;
 	private Long idVisita;
-	private String patologiaNome;
-	private String farmacoNome;
 	
 	public PatologiaCura() {
 		super();
@@ -18,8 +16,7 @@ public class PatologiaCura {
 
 	
 
-	public PatologiaCura(String da, String a, String cfPaziente, Long patologia, Long farmaco, Long idVisita,
-			String patologiaNome, String farmacoNome) {
+	public PatologiaCura(String da, String a, String cfPaziente, Patologia patologia, Farmaco farmaco, Long idVisita) {
 		super();
 		this.da = da;
 		this.a = a;
@@ -27,11 +24,8 @@ public class PatologiaCura {
 		this.patologia = patologia;
 		this.farmaco = farmaco;
 		this.idVisita = idVisita;
-		this.patologiaNome = patologiaNome;
-		this.farmacoNome = farmacoNome;
+
 	}
-
-
 
 	public String getDa() {
 		return da;
@@ -57,22 +51,6 @@ public class PatologiaCura {
 		this.cfPaziente = cfPaziente;
 	}
 
-	public Long getPatologia() {
-		return patologia;
-	}
-
-	public void setPatologia(Long patologia) {
-		this.patologia = patologia;
-	}
-
-	public Long getFarmaco() {
-		return farmaco;
-	}
-
-	public void setFarmaco(Long farmaco) {
-		this.farmaco = farmaco;
-	}
-
 	public Long getIdVisita() {
 		return idVisita;
 	}
@@ -83,27 +61,28 @@ public class PatologiaCura {
 
 
 
-	public String getPatologiaNome() {
-		return patologiaNome;
+	public Patologia getPatologia() {
+		return patologia;
 	}
 
 
 
-	public void setPatologiaNome(String patologiaNome) {
-		this.patologiaNome = patologiaNome;
+	public void setPatologia(Patologia patologia) {
+		this.patologia = patologia;
 	}
 
 
 
-	public String getFarmacoNome() {
-		return farmacoNome;
+	public Farmaco getFarmaco() {
+		return farmaco;
 	}
 
 
 
-	public void setFarmacoNome(String farmacoNome) {
-		this.farmacoNome = farmacoNome;
+	public void setFarmaco(Farmaco farmaco) {
+		this.farmaco = farmaco;
 	}
+
 	
 	
 	
