@@ -29,17 +29,6 @@ public class EseguiQuery {
         this.dataBaseConnection = new DataBase();
     }
 
-//    public void addUser(String username, String password) throws SQLException {
-//        String query = "INSERT INTO users (username, password) VALUES (?, ?)";
-//        try (Connection conn = dataBaseConnection.connetti();
-//             PreparedStatement pstmt = conn.prepareStatement(query)) {
-//            pstmt.setString(1, username);
-//            pstmt.setString(2, password);
-//            pstmt.executeUpdate();
-//        }
-//    }
-    
-
     // RICERCA PAZIENTE - RICERCA PAZIENTI CON FILTRI
     
     public List<Paziente> ricercaPazienti(RicercaPazienteDTO ricercaDTO) throws SQLException {
@@ -252,80 +241,6 @@ public class EseguiQuery {
     	return response;
     	
     }
-    
-//    public ResponseDTO<?> aggiornaPaziente(Paziente paziente, boolean nuovo) throws SQLException {
-//    	ResponseDTO<?> response = new ResponseDTO();
-//    	if(nuovo) {
-//        	
-//        	String query = "INSERT INTO paziente (cognome, nome, codice_fiscale, telefono, via, residenza, data_nascita, "
-//        			+ "luogo_nascita, sesso, occupazione) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-//        	try (Connection conn = dataBaseConnection.connetti();
-//        			PreparedStatement pstmt = conn.prepareStatement(query)) {
-//        	    pstmt.setString(1, paziente.getCognome());
-//        	    pstmt.setString(2, paziente.getNome());
-//        	    pstmt.setString(3, paziente.getCodiceFiscale());
-//        	    pstmt.setString(4, paziente.getNumeroTelefono());
-//        	    pstmt.setString(5, paziente.getVia());
-//        	    pstmt.setString(6, paziente.getResidenza());
-//        	    
-//                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-//
-//                LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
-//        	    
-//        	    pstmt.setDate(7, Date.valueOf(localDate));
-//        	    pstmt.setString(8, paziente.getLuogoNascita());
-//        	    pstmt.setString(9, String.valueOf(paziente.getSesso()));
-//        	    pstmt.setString(10, paziente.getOccupazione());
-//        	    
-//        	    int rowsAffected = pstmt.executeUpdate();
-//        	    if(rowsAffected > 0) {
-//        	    	response.setEsito("OK");
-//        	    	response.setMessage("Paziente salvato correttamente");
-//        	    	response.setStatusCode(200L);
-//        	    }else {
-//        	    	response.setEsito("ERROR");
-//        	    	response.setMessage("Salvataggio non riuscito");
-//        	    	response.setStatusCode(401L);
-//        	    }
-//        	} 
-//    		return response;
-//    	}else {
-//    		String updateQuery = "UPDATE paziente SET cognome = ?, nome = ?, telefono = ?, via = ?, residenza = ?, "
-//                    + "data_nascita = ?, luogo_nascita = ?, sesso = ?, occupazione = ? WHERE codice_fiscale = ?";
-//        	try (Connection conn = dataBaseConnection.connetti();
-//        			PreparedStatement pstmt = conn.prepareStatement(updateQuery)) {
-//        	    pstmt.setString(1, paziente.getCognome());
-//        	    pstmt.setString(2, paziente.getNome());
-//        	    pstmt.setString(3, paziente.getNumeroTelefono());
-//        	    pstmt.setString(4, paziente.getVia());
-//        	    pstmt.setString(5, paziente.getResidenza());
-//        	    
-//        	    
-//                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyy");
-//
-//                LocalDate localDate = LocalDate.parse(paziente.getDataNascita(), formatter);
-//        	    
-//        	    pstmt.setDate(6, Date.valueOf(localDate));
-//        	    pstmt.setString(7, paziente.getLuogoNascita());
-//        	    pstmt.setString(8, String.valueOf(paziente.getSesso()));
-//        	    pstmt.setString(9, paziente.getOccupazione());
-//        	    pstmt.setString(10, paziente.getCodiceFiscale());
-//        	    
-//        	    int rowsAffected = pstmt.executeUpdate();
-//        	    if(rowsAffected > 0) {
-//        	    	response.setEsito("OK");
-//        	    	response.setMessage("Paziente salvato correttamente");
-//        	    	response.setStatusCode(200L);
-//        	    }else {
-//        	    	response.setEsito("ERROR");
-//        	    	response.setMessage("Salvataggio non riuscito");
-//        	    	response.setStatusCode(401L);
-//        	    }
-//        	} 
-//    		return response;
-//    	}
-//    	
-//    }
     
     public List<PatologiaCura> listaPatologiaCura(String cfPaziente) throws SQLException{
     	List<PatologiaCura> patologiaCuraList = new ArrayList<>();
@@ -571,30 +486,5 @@ public class EseguiQuery {
 				pstmt.executeUpdate();
     	}
     }
-    
-//    public boolean controlloDateLogin(String cf) throws SQLException {
-//    	boolean isLoginValid = false;
-//        
-//    	String query = "SELECT * FROM medico WHERE codice_fiscale = ? AND responsabile != ? AND ?::date BETWEEN	\"dal\" AND \"al\"";
-//    	try (Connection conn = dataBaseConnection.connetti();
-//    			PreparedStatement pstmt = conn.prepareStatement(query)) {
-//    		pstmt.setString(1, cf);
-//    		pstmt.setInt(2, 1);
-//    		
-//            LocalDate date = LocalDate.now();
-//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-//            
-//            String dateString = date.format(formatter);
-//    		pstmt.setString(3, dateString);
-//	   		try (ResultSet rs = pstmt.executeQuery()) {
-//	            while (rs.next()) {
-//	            	isLoginValid = true;
-//	            }
-//	            return isLoginValid;
-//	   		}
-//    		
-//    	}
-//    }
-    
 
 }

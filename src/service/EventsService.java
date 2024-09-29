@@ -28,12 +28,6 @@ public class EventsService {
 		this.repository = repository;
 	}
 
-//	public ResponseDTO login(UserLoginDTO user) {
-//		ResponseDTO response = new ResponseDTO();
-//		response.setStatusCode(200L);
-//		return response;
-//	}
-
 	public ResponseDTO<?> login(UserLoginDTO user) {
 		ResponseDTO<?> response = new ResponseDTO();
 		try {
@@ -331,29 +325,6 @@ public class EventsService {
 		}
 		return response;
 	}
-	
-//	public ResponseDTO<?> controlloDateSostituto(String user, String) {
-//		ResponseDTO<?> response = new ResponseDTO();
-//		try {
-//			if(this.repository.controlloDateLogin(cf)) {
-//				response.setEsito("OK");
-//				response.setMessage("Utente ancora abilitato");
-//				response.setStatusCode(200L);
-//			}else {
-//				response.setEsito("FORBIDDEN");
-//				response.setMessage("Utente non abilitato");
-//				response.setStatusCode(403L);
-//			}
-//			
-//			
-//		} catch (SQLException e) {
-//			response.setEsito("ERROR");
-//			response.setMessage(e.getMessage());
-//			response.setStatusCode(500L);
-//			e.printStackTrace();
-//		}
-//		return response;
-//	}
 	
 	
 }
