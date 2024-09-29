@@ -1,6 +1,6 @@
 package model;
 
-public class ModelPatologiaFarmacoDTO {
+public class PatologiaFarmacoDTO {
 	
 	private Farmaco farmaco;
 	private Patologia patologia;
@@ -8,12 +8,12 @@ public class ModelPatologiaFarmacoDTO {
 	private Long statusCode;
 	private String esito;
 	
-	public ModelPatologiaFarmacoDTO() {
+	public PatologiaFarmacoDTO() {
 		super();
 		// TODO Auto-generated constructor stub
 	}
 
-	public ModelPatologiaFarmacoDTO(Farmaco farmaco, Patologia patologia, String message, Long statusCode,
+	public PatologiaFarmacoDTO(Farmaco farmaco, Patologia patologia, String message, Long statusCode,
 			String esito) {
 		super();
 		this.farmaco = farmaco;

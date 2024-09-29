@@ -23,10 +23,10 @@ import model.UserLoginDTO;
 import model.Visita;
 
 public class EseguiQuery {
-	private DataBaseConnection dataBaseConnection;
+	private DataBase dataBaseConnection;
 
     public EseguiQuery() {
-        this.dataBaseConnection = new DataBaseConnection();
+        this.dataBaseConnection = new DataBase();
     }
 
 //    public void addUser(String username, String password) throws SQLException {
@@ -169,7 +169,7 @@ public class EseguiQuery {
                          response.setStatusCode(200L);
                          List<String> cfList = new ArrayList<>();
                          cfList.add(rs.getString("codice_fiscale"));
-                         response.setData(cfList);
+                         response.setDati(cfList);
                      } else {
                     	 response.setMessage("Utente non abilitato per la data odierna");
                          response.setEsito("NOT AUTHORIZED");

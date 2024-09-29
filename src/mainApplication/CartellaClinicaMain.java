@@ -4,17 +4,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import dao.EseguiQuery;
 import javafx.animation.PauseTransition;
-import javafx.animation.Timeline;
 import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -22,7 +18,6 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -45,9 +40,6 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 import model.Farmaco;
-import model.ListModelDTO;
-import model.Medico;
-import model.ModelPatologiaFarmacoDTO;
 import model.Patologia;
 import model.PatologiaCura;
 import model.Paziente;
@@ -58,38 +50,23 @@ import model.Visita;
 import service.EventsService;
 
 public class CartellaClinicaMain extends Application{
-	 //implements EventHandler<ActionEvent>
+	
 	private EventsService eventService;
-	private Button loginButton;
-	private MenuItem loginItem;
 	private boolean userLoggedIn = false;
 	private String cfMedicoLoggato;
-	private Label titleLabel;
 	private Paziente pazienteSelezionato = null;
 	private Menu fileMenu;
 	private Menu pazienteMenu;
 	private Menu sostitutoMenu;
-	private Menu questionMark;
-	private MenuItem accessoItem;
     private MenuItem logoutItem;
-    private MenuItem ricercaPaziente;
-    private MenuItem inserisciPaziente;
-    private MenuItem dbItem;
-    private MenuItem exitItem; 
     private boolean tastiRicercaTabDisabled;
 	private TableView<Paziente> tableRicercaPaziente;
 	private PatologiaCura modelForm = null;
-	private Button impostaButton;
 	private boolean cfPrimoAccessoValido;
-	
-	private List<String> listaCfMedici;
 	private ObservableList<Paziente> data;
 	private List<Paziente> pazientiRicercaList = new ArrayList<>();
 	private List<PatologiaCura> relPatologiaCuraList = new ArrayList<>();
-	
 	private Map<String, Stage> stageList = new HashMap<String, Stage>();
-	private Map<String, Button> buttonList = new HashMap<String, Button>();
-	private Map<String, MenuItem> menuItemList = new HashMap<String, MenuItem>();
 	
 	
 	
@@ -109,29 +86,25 @@ public class CartellaClinicaMain extends Application{
 	   fileMenu = new Menu("File");
        pazienteMenu = new Menu("Paziente");
        sostitutoMenu = new Menu("Sostituto");
-       questionMark = new Menu("?");
         
         pazienteMenu.setDisable(!this.userLoggedIn);
         sostitutoMenu.setDisable(!this.userLoggedIn);
-        questionMark.setDisable(!this.userLoggedIn);
-        // File Menu Items
-        loginItem = new MenuItem("Login");
-        accessoItem = new MenuItem("Primo accesso");
-        logoutItem = new MenuItem("Logout");
-        dbItem = new MenuItem("Connessione DB");
-        exitItem = new MenuItem("Esci");
         
+        MenuItem loginItem = new MenuItem("Login");
+        MenuItem accessoItem = new MenuItem("Primo accesso");
+        MenuItem exitItem = new MenuItem("Esci");
+        
+        logoutItem = new MenuItem("Logout");
         logoutItem.setDisable(!this.userLoggedIn);
-        // Paziente menu items
-        ricercaPaziente = new MenuItem("Ricerca paziente");
-        inserisciPaziente = new MenuItem("Inserisci paziente");
-        this.menuItemList.put("InserisciPazienteItem", inserisciPaziente);
+        
+        MenuItem ricercaPaziente = new MenuItem("Ricerca paziente");
+        MenuItem inserisciPaziente = new MenuItem("Inserisci paziente");
         
         MenuItem abilitaSostitutoMenu = new MenuItem("Abilita sostituto");
         
         sostitutoMenu.getItems().addAll(abilitaSostitutoMenu);
-        // Adding actions to menu items (optional)
-        exitItem.setOnAction(e -> arg0.close()); // Close app when 'Exit' is clicked
+        
+        exitItem.setOnAction(e -> arg0.close());
         loginItem.setOnAction(e -> {
         	this.finestraLogin();
         });
@@ -149,13 +122,13 @@ public class CartellaClinicaMain extends Application{
         	this.finestraPrimoAccesso();
         });
         
-        fileMenu.getItems().addAll(loginItem, accessoItem, logoutItem, dbItem, exitItem);
+        fileMenu.getItems().addAll(loginItem, accessoItem, logoutItem, exitItem);
         pazienteMenu.getItems().addAll(ricercaPaziente, inserisciPaziente);
      
-        menuBar.getMenus().addAll(fileMenu, pazienteMenu, sostitutoMenu, questionMark);
+        menuBar.getMenus().addAll(fileMenu, pazienteMenu, sostitutoMenu);
         StackPane layout = new StackPane();
         
-        titleLabel = new Label("Gestione Cartella Clinica");
+        Label titleLabel = new Label("Gestione Cartella Clinica");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold;");
         layout.getChildren().add(titleLabel);
         StackPane.setAlignment(titleLabel, Pos.TOP_CENTER);
@@ -166,7 +139,6 @@ public class CartellaClinicaMain extends Application{
         	this.userLoggedIn = false;
         	pazienteMenu.setDisable(!this.userLoggedIn);
             sostitutoMenu.setDisable(!this.userLoggedIn);
-            questionMark.setDisable(!this.userLoggedIn);
             logoutItem.setDisable(!this.userLoggedIn);
         	StackPane stack = (StackPane)root.getCenter();
         	this.showTemporaryAlert(stack, "Logged Out", 3000);
@@ -179,10 +151,9 @@ public class CartellaClinicaMain extends Application{
 		
 	}
 	
-	private void finestraInserimentoPaziente(boolean nuovoPaziente, Paziente pazienteDTO) {
+	public void finestraInserimentoPaziente(boolean nuovoPaziente, Paziente pazienteDTO) {
 		VBox vbox = new VBox(10);
 		Button salvaPaziente = new Button("Aggiorna");
-		this.buttonList.put("salvaPazienteButton", salvaPaziente);
 		
 		
 		Label codiceFiscale = new Label("*Codice Fiscale:");
@@ -258,8 +229,6 @@ public class CartellaClinicaMain extends Application{
             	sessoFieldF.setSelected(true);
             }
         }
-
-        
         salvaPaziente.setOnAction(e ->{
         	if(codiceFiscaleField.getText().equals("") || cognomeField.getText().equals("") || nomeField.getText().equals("")) {
         		this.showAlertWithMessage("Devi inserire i campi obbligatori!", AlertType.WARNING);
@@ -336,10 +305,10 @@ public class CartellaClinicaMain extends Application{
 		
 	}
 
-	private void finestraLogin() {
+	public void finestraLogin() {
 		Label nameLabel = new Label("Username:");
         Label passwordLabel = new Label("Password:");
-        loginButton  = new Button();
+        Button loginButton  = new Button();
 
         TextField nameField = new TextField();
         PasswordField passwordField = new PasswordField(); 
@@ -366,10 +335,9 @@ public class CartellaClinicaMain extends Application{
             	this.userLoggedIn = true;
             	this.stageList.get("loginStage").close();
 
-            	this.cfMedicoLoggato = (String)response.getData().get(0);
+            	this.cfMedicoLoggato = (String)response.getDati().get(0);
             	pazienteMenu.setDisable(!this.userLoggedIn);
                 sostitutoMenu.setDisable(!this.userLoggedIn);
-                questionMark.setDisable(!this.userLoggedIn);
                 logoutItem.setDisable(!this.userLoggedIn);
                 
                 BorderPane root = (BorderPane) this.stageList.get("mainStage").getScene().getRoot();
@@ -425,7 +393,7 @@ public class CartellaClinicaMain extends Application{
         pause.play();
     }
 	
-	private void finestraCercaPaziente() {
+	public void finestraCercaPaziente() {
 		this.tastiRicercaTabDisabled = true;
 		this.pazientiRicercaList.clear();
 		Button ricercaPaziente = new Button("Cerca");
@@ -433,9 +401,6 @@ public class CartellaClinicaMain extends Application{
 		Button datiAnagrafici = new Button("Dati Anagrafici");
 		cartellaClinica.setDisable(this.tastiRicercaTabDisabled);
 		datiAnagrafici.setDisable(this.tastiRicercaTabDisabled);
-		this.buttonList.put("ricercaPazienteButton", ricercaPaziente);
-		this.buttonList.put("cartellaClinicaButton", cartellaClinica);
-		this.buttonList.put("datiAnagraficiButton", datiAnagrafici);
 		
 		Stage stage = new Stage();
         this.stageList.put("ricercaPazienteStage", stage);
@@ -578,14 +543,14 @@ public class CartellaClinicaMain extends Application{
 //
 //	}
 	
-	private void finestraCartella(Paziente paziente) {
+	public void finestraCartella(Paziente paziente) {
 		this.relPatologiaCuraList.clear();
 		Stage stage = new Stage();
 		this.stageList.put("cartellaClinicaStage", stage);
 		stage.setTitle("Cartella Clinica Paziente");
-		List<Patologia> listaPatologie = this.eventService.getPatologiaList().getData();
-		List<Farmaco> listaFarmaci = this.eventService.getFarmacoList().getData();
-		this.relPatologiaCuraList = this.eventService.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+		List<Patologia> listaPatologie = this.eventService.getPatologiaList().getDati();
+		List<Farmaco> listaFarmaci = this.eventService.getFarmacoList().getDati();
+		this.relPatologiaCuraList = this.eventService.getPatologiaCuraList(paziente.getCodiceFiscale()).getDati();
 		
 		Button storico = new Button("Storico");
         Button stampa = new Button("Stampa");
@@ -725,8 +690,8 @@ public class CartellaClinicaMain extends Application{
                 	patologiaCura.setFarmaco(farmacoEntity);
                 	patologiaCura.setIdVisita(idVisita);
                 	patologiaCura.setCfPaziente(paziente.getCodiceFiscale());
-                	this.eventService.salvaRel(patologiaCura);
-                	this.relPatologiaCuraList = this.eventService.getPatologiaCuraList(paziente.getCodiceFiscale()).getData();
+                	this.eventService.salvaRelPatologiaCura(patologiaCura);
+                	this.relPatologiaCuraList = this.eventService.getPatologiaCuraList(paziente.getCodiceFiscale()).getDati();
                 	
             	}
         	}else {
@@ -735,7 +700,7 @@ public class CartellaClinicaMain extends Application{
         	
         });
         storico.setOnAction(e -> {
-        	this.finestraStoricoVisite(paziente);
+        	this.finestraStorico(paziente);
         });
         HBox rowButtonEnd = new HBox(15, storico, stampa, salva);
         rowButtonEnd.setAlignment(Pos.CENTER);
@@ -750,10 +715,10 @@ public class CartellaClinicaMain extends Application{
  	
 	}
 	
-	private void finestraStoricoVisite(Paziente paziente) {
+	public void finestraStorico(Paziente paziente) {
 		Stage stage = new Stage();
         stage.setTitle("Ricerca");
-        List<Visita> storicoVisite = this.eventService.getStoricoVisite(paziente.getCodiceFiscale()).getData();
+        List<Visita> storicoVisite = this.eventService.getStoricoVisite(paziente.getCodiceFiscale()).getDati();
 		 
 		Label titoloModale = new Label("Storico Visite");
         //titoloModale.setPadding(new Insets(0,0,0,15));
@@ -812,8 +777,8 @@ public class CartellaClinicaMain extends Application{
 		
 	}
 	
-	private void abilitaSostituto() {
-		this.listaCfMedici = this.eventService.listaMedici().getData();
+	public void abilitaSostituto() {
+		List<String> listaCfMedici = this.eventService.listaMedici().getDati();
 		Stage stage = new Stage();
 		this.stageList.put("abilitaSostitutoStage", stage);
 		stage.setTitle("Abilita Sostituto");
@@ -828,14 +793,9 @@ public class CartellaClinicaMain extends Application{
         BorderPane root = new BorderPane();
         root.setTop(titoloModale);
         
-//        Label cura = new Label("Cura:");
-//        cura.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         ComboBox<String> cfMedicoField = new ComboBox<>();
-        cfMedicoField.setItems(FXCollections.observableArrayList(this.listaCfMedici));
+        cfMedicoField.setItems(FXCollections.observableArrayList(listaCfMedici));
 
-        
-        //curaField.setValue(this.listaCfMedici.get(0));
-        
         Label dataDal = new Label("Dal:");
         dataDal.setStyle("-fx-font-weight: bold; -fx-font-size: 13px;");
         TextField dataDalField = new TextField();
@@ -878,10 +838,10 @@ public class CartellaClinicaMain extends Application{
 		Label userLabel = new Label("*User:");
         Label passwordLabel = new Label("*Password:");
         Label confermaPasswordLabel = new Label("*Conferma Password:");
-        this.impostaButton  = new Button();
+        Button impostaButton  = new Button();
         Button cerca = new Button();
         cerca.setText("Cerca");
-        this.impostaButton.setText("Imposta");
+        impostaButton.setText("Imposta");
 
         TextField cfField = new TextField();
         PasswordField passwordField = new PasswordField(); 
@@ -891,7 +851,7 @@ public class CartellaClinicaMain extends Application{
         passwordField.setDisable(!this.cfPrimoAccessoValido);
         confermaPasswordField.setDisable(!this.cfPrimoAccessoValido);
         userField.setDisable(!this.cfPrimoAccessoValido);
-        this.impostaButton.setDisable(!this.cfPrimoAccessoValido);
+        impostaButton.setDisable(!this.cfPrimoAccessoValido);
         HBox row1 = new HBox(10, cfLabel, cfField);
         row1.setAlignment(Pos.CENTER_RIGHT);
         HBox row2 = new HBox(10, cerca);
@@ -902,7 +862,7 @@ public class CartellaClinicaMain extends Application{
         row4.setAlignment(Pos.CENTER_RIGHT);
         HBox row5 = new HBox(10, confermaPasswordLabel, confermaPasswordField);
         row5.setAlignment(Pos.CENTER_RIGHT);
-        HBox row6 = new HBox(10, this.impostaButton);
+        HBox row6 = new HBox(10, impostaButton);
         row6.setAlignment(Pos.CENTER);
         VBox vbox = new VBox(15); 
         vbox.getChildren().addAll(row1, row2, row3, row4, row5, row6);
@@ -936,13 +896,13 @@ public class CartellaClinicaMain extends Application{
 					passwordField.setDisable(!this.cfPrimoAccessoValido);
 			        confermaPasswordField.setDisable(!this.cfPrimoAccessoValido);
 			        userField.setDisable(!this.cfPrimoAccessoValido);
-			        this.impostaButton.setDisable(!this.cfPrimoAccessoValido);
+			        impostaButton.setDisable(!this.cfPrimoAccessoValido);
 				}else if(response.getStatusCode() == 404L){
 					this.showAlertWithMessage(response.getMessage(), AlertType.WARNING);
 				}
 			}
 		});
-		this.impostaButton.setOnAction(e -> {
+		impostaButton.setOnAction(e -> {
 			if("".equals(passwordField.getText()) || "".equals(confermaPasswordField.getText()) || "".equals(userField.getText())) {
 				this.showAlertWithMessage("Inserire i campi obbligatori", AlertType.WARNING);
 			}else if(!passwordField.getText().equals(confermaPasswordField.getText())){
@@ -962,15 +922,15 @@ public class CartellaClinicaMain extends Application{
 		if(ricerca == null || (ricerca.getCodiceFiscale().equals("") && ricerca.getCognome().equals("") && ricerca.getNome().equals("") 
     			&& ricerca.getPatologia().equals(""))) {
     		ResponseDTO<Paziente> response = this.eventService.getListaPazienti(null);
-    		if(response != null && response.getData().size() > 0) {
-    			this.pazientiRicercaList = response.getData();
+    		if(response != null && response.getDati().size() > 0) {
+    			this.pazientiRicercaList = response.getDati();
     		}
     		
     	}else {
     		
     		ResponseDTO<Paziente> response = this.eventService.getListaPazienti(ricerca);
-    		if(response != null && response.getData() != null) {
-    			this.pazientiRicercaList = response.getData();
+    		if(response != null && response.getDati() != null) {
+    			this.pazientiRicercaList = response.getDati();
     		}
     	}
 		if(this.pazientiRicercaList.isEmpty()) {

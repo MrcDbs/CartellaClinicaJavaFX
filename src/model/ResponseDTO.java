@@ -7,7 +7,7 @@ public class ResponseDTO<T> {
 	private String message;
 	private Long statusCode;
 	private String esito;
-	private List<T> data;
+	private List<T> dati;
 	private Long id;
 	
 	
@@ -34,11 +34,11 @@ public class ResponseDTO<T> {
 	public void setEsito(String esito) {
 		this.esito = esito;
 	}
-	public List<T> getData() {
-		return data;
+	public List<T> getDati() {
+		return dati;
 	}
-	public void setData(List<T> data) {
-		this.data = data;
+	public void setDati(List<T> data) {
+		this.dati = data;
 	}
 	
 	public Long getId() {
@@ -49,7 +49,7 @@ public class ResponseDTO<T> {
 	}
 	@Override
 	public String toString() {
-		return "ResponseDTO [message=" + message + ", statusCode=" + statusCode + ", esito=" + esito + ", data=" + data
+		return "ResponseDTO [message=" + message + ", statusCode=" + statusCode + ", esito=" + esito + ", data=" + dati
 				+ "]";
 	}
 	

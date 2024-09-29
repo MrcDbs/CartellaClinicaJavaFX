@@ -4,24 +4,11 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
 import java.util.List;
 
 import dao.EseguiQuery;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.geometry.Pos;
-import javafx.scene.control.Label;
-import javafx.scene.control.TableColumn;
-import javafx.scene.control.TableView;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
 import model.Farmaco;
-import model.ListModelDTO;
-import model.ModelPatologiaFarmacoDTO;
+import model.PatologiaFarmacoDTO;
 import model.Patologia;
 import model.PatologiaCura;
 import model.Paziente;
@@ -52,7 +39,7 @@ public class EventsService {
 		try {
 			response = this.repository.verificaLogin(user);
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -68,7 +55,7 @@ public class EventsService {
 			response = this.repository.aggiornaPaziente(paziente, nuovo);
 			
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -84,18 +71,17 @@ public class EventsService {
 		try {
 			List<Paziente> result = this.repository.ricercaPazienti(ricerca);
 			//model = new ListModelDTO<PazienteDTO>(result);
-			response.setData(result);
+			response.setDati(result);
 			response.setEsito("OK");
 			response.setMessage("Dati recuperati con successo");
 			response.setStatusCode(200L);
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
 			e.printStackTrace();
 		}
-		System.out.println(response.toString());
 		return response;
 		
 	}
@@ -104,12 +90,12 @@ public class EventsService {
 		ResponseDTO<Patologia> response = new ResponseDTO<Patologia>();
 		try {
 			List<Patologia> result = this.repository.listaPatologia();
-			response.setData(result);
+			response.setDati(result);
 			response.setEsito("OK");
 			response.setMessage("Dati recuperati con successo");
 			response.setStatusCode(200L);
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -123,12 +109,12 @@ public class EventsService {
 		ResponseDTO<Farmaco> response = new ResponseDTO<Farmaco>();
 		try {
 			List<Farmaco> result = this.repository.listaFarmaco();
-			response.setData(result);
+			response.setDati(result);
 			response.setEsito("OK");
 			response.setMessage("Dati recuperati con successo");
 			response.setStatusCode(200L);
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -148,12 +134,12 @@ public class EventsService {
 				rel.getFarmaco().setNome(nomeFarmaco);
 				rel.getPatologia().setNome(nomePatologia);
 			});
-			response.setData(result);
+			response.setDati(result);
 			response.setEsito("OK");
 			response.setMessage("Dati recuperati con successo");
 			response.setStatusCode(200L);
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -163,8 +149,8 @@ public class EventsService {
 		
 	}
 	
-	public ModelPatologiaFarmacoDTO getFarmacoById(Long idFarmaco) {
-		ModelPatologiaFarmacoDTO response = new ModelPatologiaFarmacoDTO();
+	public PatologiaFarmacoDTO getFarmacoById(Long idFarmaco) {
+		PatologiaFarmacoDTO response = new PatologiaFarmacoDTO();
 		try {
 			Farmaco result = this.repository.getFarmacoById(idFarmaco);
 			response.setFarmaco(result);
@@ -183,8 +169,8 @@ public class EventsService {
 		return response;
 	}
 	
-	public ModelPatologiaFarmacoDTO getPatologiaById(Long idPatologia) {
-		ModelPatologiaFarmacoDTO response = new ModelPatologiaFarmacoDTO();
+	public PatologiaFarmacoDTO getPatologiaById(Long idPatologia) {
+		PatologiaFarmacoDTO response = new PatologiaFarmacoDTO();
 		try {
 			Patologia result = this.repository.getPatologiaById(idPatologia);
 			response.setFarmaco(null);
@@ -209,7 +195,7 @@ public class EventsService {
 			response = this.repository.salvaVisita(visita);
 			
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -218,13 +204,13 @@ public class EventsService {
 		return response;
 	}
 	
-	public ResponseDTO<?> salvaRel(PatologiaCura entity){
+	public ResponseDTO<?> salvaRelPatologiaCura(PatologiaCura entity){
 		ResponseDTO<?> response = new ResponseDTO();
 		try {
 			response = this.repository.salvaRelPatologiaCura(entity);
 			
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -252,13 +238,13 @@ public class EventsService {
 	public ResponseDTO<Visita> getStoricoVisite(String cfPaziente){
 		ResponseDTO<Visita> response = new ResponseDTO<Visita>();
 		try {
-			response.setData(this.repository.getStoricoVisite(cfPaziente));
+			response.setDati(this.repository.getStoricoVisite(cfPaziente));
 			response.setEsito("ERROR");
 			response.setMessage("Dati recuperati con successo");
 			response.setStatusCode(200L);
 			
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
@@ -270,13 +256,13 @@ public class EventsService {
 	public ResponseDTO<String> listaMedici(){
 		ResponseDTO<String> response = new ResponseDTO<String>();
 		try {
-			response.setData(this.repository.listaMedici());
+			response.setDati(this.repository.listaMedici());
 			response.setEsito("ERROR");
 			response.setMessage("Dati recuperati con successo");
 			response.setStatusCode(200L);
 			
 		} catch (SQLException e) {
-			response.setData(null);
+			response.setDati(null);
 			response.setEsito("ERROR");
 			response.setMessage(e.getMessage());
 			response.setStatusCode(500L);
